@@ -21,8 +21,8 @@ public class MapProtocol<T> implements Chan<T> {
     
 
     MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Rng rng, NodeState init) {
-        this.inbox = Arrays.new<T>();
-        this.outbox = Arrays.new<T>();
+        this.inbox = new BufferedChan<T>();
+        this.outbox = new BufferedChan<T>();
 	this.subscribers = Arrays.new<(T)->void>();
 	this.timer = timer;
 	this.rng = rng;
