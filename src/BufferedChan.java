@@ -4,12 +4,12 @@ public class BufferedChan<T> implements Chan<T> {
     private List<Runnable<T>> subscribers;
 
     BufferedChan() {
-    	this.queue = new ArrayList<>();
-	    this.subscribers = new ArrayList<>();
+        this.queue = new ArrayList<>();
+        this.subscribers = new ArrayList<>();
     }
 
     public synchronized Optional<T> pull() {
-        if(queue.length == 0)
+        if (queue.length == 0)
             return Optional.empty();
         T first = queue[0];
         queue = Arrays.copyOfRange(queue, 1, queue.length);
@@ -22,9 +22,6 @@ public class BufferedChan<T> implements Chan<T> {
     }
 
     public synchronized void registerCallback(Runnable<T> cb) {
-	    subscribers.add(cb);
+        subscribers.add(cb);
     }
 }
-
-    
-	    

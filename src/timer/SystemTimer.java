@@ -3,10 +3,9 @@ class SystemTimer implements Timer {
     }
 
     public void callbackIn(int ms, Runnable cb) {
-        CompletableFuture.runAsync(()->{
+        CompletableFuture.runAsync(() -> {
             System.sleep(ms);
-                cb.run();
-            });
+            cb.run();
+        });
     }
 }
-
