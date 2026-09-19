@@ -1,13 +1,17 @@
+import java.util.ArrayList;
+import java.util.List;
+
 public class Main {
 	public static void main() {
+
+		// read config
+		// accept config / fork
 		test();
 	}
 
 	public static void test() {
 		List<Int> actions = new ArrayList<Int>();
 		try {
-			// read config
-			// accept config / fork
 
 			Timer timer = new LogicalTimer();
 			Rng rand = new Rng(0);
@@ -75,9 +79,9 @@ public class Main {
 				}
 			}
 		} catch (RuntimeException _re) {
-			System.out.printf("action sequence: [");
+			System.out.print("action sequence: [");
 			actions.stream().peek((n) -> System.out.printf("%d, ", n));
-			system.out.printf("\n");
+			system.out.print("]\n");
 		}
 	}
 }

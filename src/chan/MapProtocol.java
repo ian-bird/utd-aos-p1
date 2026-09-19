@@ -49,7 +49,8 @@ public class MapProtocol<T> implements Chan<T> {
 		this.outbox.registerCallback((v) -> {
 			synchronized (this) {
 				if (s == NodeState.ACTIVE_READY) {
-					o.get(rng.pull().orElseThrow(() -> new RuntimeException()) % o.length()).push(outbox.pull().orElse(v));
+					o.get(rng.pull().orElseThrow(() -> new RuntimeException()) % o.length())
+							.push(outbox.pull().orElse(v));
 					updateStateSent();
 				}
 			}
@@ -57,9 +58,9 @@ public class MapProtocol<T> implements Chan<T> {
 	}
 
 	public Optional<T> pull() {
-		
-		return inbox.pull().map((v)->{
-			subscribers.stream().peek((s)->s.accept(v));
+
+		return inbox.pull().map((v) -> {
+			subscribers.stream().peek((s) -> s.accept(v));
 			return v;
 		});
 	}

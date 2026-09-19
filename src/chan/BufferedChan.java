@@ -18,7 +18,7 @@ public class BufferedChan<T> implements Chan<T> {
 
     public synchronized void push(T v) {
         queue.add(v);
-        subscribers.map((s) -> s(v));
+        subscribers.stream().peek((s) -> s.accept(v));
     }
 
     public synchronized void registerCallback(Runnable<T> cb) {
