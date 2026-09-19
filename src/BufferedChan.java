@@ -8,7 +8,7 @@ public class BufferedChan<T> implements Chan<T> {
 	this.subscribers = Arrays.new<(T)->void>();
     }
 
-    public Optional<T> pull() {
+    public synchronized Optional<T> pull() {
 	if(queue.length == 0)
 	    return Optional.empty();
 	T first = queue[0];
@@ -16,12 +16,12 @@ public class BufferedChan<T> implements Chan<T> {
 	return first;
     }
 
-    public void push(T v) {
+    public synchronized void push(T v) {
 	queue.add(v);
 	subscribers.map((s) -> s(v));
     }
 
-    public void registerCallback((T)->void cb) {
+    public synchronized void registerCallback((T)->void cb) {
 	subscribers.add(cb);
     }
 }

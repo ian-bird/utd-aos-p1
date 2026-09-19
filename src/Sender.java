@@ -10,12 +10,12 @@ public class Sender<T implements ToStringer> implements Pusher<T> {
 	this.out = new PrintWriter(clientSocket.getOutputStream(), true);
     }
 
-    public void push(T v) {
+    public synchronized void push(T v) {
 	out.println(v.toString());
 	subscribers.map((s) -> s(v));
     }
 
-    public void registerCallback((T)->void cb) {
+    public synchronized void registerCallback((T)->void cb) {
 	subscribers.add(cb);
     }
 }
