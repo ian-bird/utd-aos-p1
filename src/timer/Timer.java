@@ -1,3 +1,3 @@
 public interface Timer {
-    public void callbackIn(int , ()->void);
+    public void callbackIn(int time, Runnable cb);
 }
