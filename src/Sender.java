@@ -1,21 +1,22 @@
 
-public class Sender<T implements ToStringer> implements Pusher<T> {
+public class Sender<T> implements Pusher<T> {
     private Socket clientSocket;
-    private List<(T)->void> subscribers;
+    private List<Consumer<T>> subscribers;
     private PrintWriter out;
+    private Function<T, String> toString;
     
-    Sender(int ip, int port) {
-	this.subscribers = Arrays.new<(T)->void>();
+    Sender(int ip, int port, Function<T, String> toString) {
+	this.subscribers = new ArrayList<Consumer<T>>();
 	this.clientSocket = new Socket(ip, port);
 	this.out = new PrintWriter(clientSocket.getOutputStream(), true);
     }
 
     public synchronized void push(T v) {
 	out.println(v.toString());
-	subscribers.map((s) -> s(v));
+	subscribers.map((s) -> s.accept(v));
     }
 
-    public synchronized void registerCallback((T)->void cb) {
+    public synchronized void registerCallback(Consumer<T> cb) {
 	subscribers.add(cb);
     }
 }

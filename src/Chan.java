@@ -1,5 +1,7 @@
+import java.util.Optional;
+
 interface Chan<T> {
     Optional<T> pull();
-    void push(T);
-    void registerCallback((T)->void);
+    void push(T t);
+    void registerCallback(Consumer<T> cb);
 }

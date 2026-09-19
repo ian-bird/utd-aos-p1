@@ -1,4 +1,4 @@
 interface Pusher<T> {
-    void Push(T);
-    void registerCallback((T)->void);
+    void Push(T v);
+    void registerCallback(Consumer<T> cb);
 }

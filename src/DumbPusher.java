@@ -1,15 +1,15 @@
-public class DumbPusher<T> {
-    private List<(T)->void> subscribers;
+public class DumbPusher<T> implements Pusher<T> {
+    private List<Consumer<T>> subscribers;
 
-    DumbPusher<T>() {
-	this.subscribers = Arrays.new<>();
+    DumbPusher() {
+	    this.subscribers = new ArrayList<>();
     }
 
     public synchronized void push(T v) {
-	subscribers.stream().map((s)->s(v));
+	    subscribers.stream().map((s)->s.accept(v));
     }
 
-    public synchronized void registerCallback((T)->void cb) {
-	subscribers.add(cb);
+    public synchronized void registerCallback(Consumer<T> cb) {
+	    subscribers.add(cb);
     }
 }

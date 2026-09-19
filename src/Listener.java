@@ -1,49 +1,58 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
-public class Listener<T implements FromStringer> implements Pusher<T> {
-    private List<(T)->void> subscribers;
+public class Listener<T> implements Pusher<T> {
+    private List<Consumer<T>> subscribers;
     private ServerSocket serverSocket;
+	private Function<String,T> builder;
     
-    Listener<T>(Integer port) {
-	this.subscribers = Arrays.new<(T)->void>();
+    Listener(Integer port, Function<String,T> builder) {
+		this.subscribers = new ArrayList<Consumer<T>>();
+		this.builder = builder;
         serverSocket = new ServerSocket(port);
-	CompletableFuture::runAsync(this::listen);
+		CompletableFuture.runAsync(this::listen);
     }
 
     public synchronized void push(T _v) {
     }
 
-    public synchronized void registerCallback((T)->void cb) {
-	subscribers.add(cb);
+    public synchronized void registerCallback(Consumer<T> cb) {
+		subscribers.add(cb);
     }
 
     private void listen() {
-	while(true) {
-	    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-	    String msg = in.readline();
-	
-	    try {
-		T fromSocket = T::fromString(msg);
-		synchronized {
-		    subscribers.stream().peek((s)->s(fromSocket));
-		}
+		while(true) {
+			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			String msg = in.readline();
 		
-	    } catch (_ex Exception) {
-	    }
-	}
+			try {
+				T fromSocket = builder.apply(msg);
+				synchronized(this) {
+					subscribers.stream().peek((s)->s.accept(fromSocket));
+				}
+			} catch (_ex Exception) {
+			}
+		}
     }
 	    
 
     private Optional<T> tryToReceive() {
-	if(!clientSocket.getInputStream().available())
-	    return Optional.empty();
-	
-	in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-	String msg = in.readline();
-	
-	try {
-	    return Optional.of(T::fromString(msg));
-	} catch (_ex Exception) {
-	    return Optional.empty();
-	}
+		if(!clientSocket.getInputStream().available())
+			return Optional.empty();
+		
+		in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+		String msg = in.readline();
+		
+		try {
+			return Optional.of(builder.apply(msg));
+		} catch (_ex Exception) {
+			return Optional.empty();
+		}
     }
 }
