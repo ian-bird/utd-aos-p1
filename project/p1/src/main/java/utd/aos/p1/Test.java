@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Phaser;
 
 import utd.aos.p1.map.MapProtocol;
 import utd.aos.p1.map.NodeState;
@@ -24,19 +25,14 @@ class Incrementable {
 
     public synchronized Incrementable incf() {
         i++;
-        notifyAll();
         return this;
     }
 
     public synchronized int get() {
         return i;
     }
-
-    public synchronized void waitUntil(int tasksCompleted) throws InterruptedException {
-        while(i < tasksCompleted)
-            wait();
-    }
 }
+
 
 public class Test {
     public static void main(String[] _args) throws Exception {
@@ -50,18 +46,22 @@ public class Test {
         int port = 9006;
         Listener<Integer> l = new Listener<>(port, Integer::parseInt);
         Sender<Integer> s = new Sender<>(ip, port, (i)->i.toString());
-        Incrementable tasksCompleted = new Incrementable(0);
-        
+        Phaser p = new Phaser(1);
 
         l.registerCallback((i)->{
             System.out.printf("received %d\n", i);
-            tasksCompleted.incf();
+            p.arrive();
         });
 
         System.out.println("sending 0");
         s.push(0);
+        p.register();
 
-        tasksCompleted.waitUntil(1);
+        System.out.println("sending 1");
+        s.push(1);
+        p.register();
+        
+        p.arriveAndAwaitAdvance();
 
         System.out.println("done");
     }
