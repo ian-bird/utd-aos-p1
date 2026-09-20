@@ -15,6 +15,6 @@ public class Rng implements Puller<Integer> {
         // linear congruential generator: ANSI C recommended values
         currentVal = (currentVal * 1103515245 + 12345) % (1 << 31);
 
-        return Optional.of(result);
+        return Optional.of(Math.abs(result));
     }
 }

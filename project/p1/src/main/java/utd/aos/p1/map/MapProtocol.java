@@ -44,15 +44,24 @@ public class MapProtocol<T> implements Chan<T> {
 			updateStateReceived();
 		});
 
+		// if we start in sleep we need to enter it properly.
+		if(init == NodeState.ACTIVE_SLEEP)
+			enterSleep();
+
 		// we get a new message to send, try to deliver it if possible.
 		this.outbox.registerCallback((v) -> {
 			synchronized (this) {
+				// if we're ready, then we're waiting for a message to come in. This is it!
 				if (s == NodeState.ACTIVE_READY) {
 					o.get(rng.pull().orElseThrow(() -> new RuntimeException()) % o.size())
 							.push(outbox.pull().orElse(v));
 					updateStateSent();
+					
+					// that element has been consumed; remove it.
+					outbox.pull();
 				}
 			}
+
 		});
 	}
 

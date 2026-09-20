@@ -12,7 +12,8 @@ public class SubscriberManager<T> implements Pusher<T> {
     }
 
     public synchronized void push(T v) {
-        subscribers.stream().peek((s) -> s.accept(v));
+        for(Consumer<T> subscriber : subscribers)
+            subscriber.accept(v);
     }
 
     public synchronized void registerCallback(Consumer<T> cb) {

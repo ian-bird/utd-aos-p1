@@ -27,11 +27,11 @@ public class BufferedChan<T> implements Chan<T> {
     }
 
     public void push(T v) {
-        subs.push(v);
-        
         synchronized(this) {
             queue.add(v);
         }
+        
+        subs.push(v);
     }
 
     public void registerCallback(Consumer<T> cb) {
