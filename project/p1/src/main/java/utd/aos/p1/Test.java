@@ -1,5 +1,8 @@
 package utd.aos.p1;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -7,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Phaser;
 
+import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.map.MapProtocol;
 import utd.aos.p1.map.NodeState;
 import utd.aos.p1.puller.Rng;
@@ -33,22 +37,40 @@ class Incrementable {
     }
 }
 
-
 public class Test {
     public static void main(String[] _args) throws Exception {
         // testMap(NodeState.ACTIVE_SLEEP, 0);
 
-        testListenerAndSender();
+        // testListenerAndSender();
+
+        testConfig();
+    }
+
+    static String slurp(String path) throws FileNotFoundException, IOException {
+        StringBuilder resultStringBuilder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(path));) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                resultStringBuilder.append(line).append("\n");
+            }
+        }
+
+        return resultStringBuilder.toString();
+    }
+
+    static void testConfig() throws FileNotFoundException, IOException {
+        MapConfig.loadConfig(slurp("/Users/ianbird/src/utd-aos-p1/project/p1/src/main/resources/config.txt"));
+        System.out.printf("neighbor 1 of node 4 (should be 0): %d\n", MapConfig.NEIGHBORS.get(4).get(0));
     }
 
     static void testListenerAndSender() throws UnknownHostException, IOException, InterruptedException {
         InetAddress ip = InetAddress.getByName("localhost");
         int port = 9006;
         Listener<Integer> l = new Listener<>(port, Integer::parseInt);
-        Sender<Integer> s = new Sender<>(ip, port, (i)->i.toString());
+        Sender<Integer> s = new Sender<>(ip, port, (i) -> i.toString());
         Phaser p = new Phaser(1);
 
-        l.registerCallback((i)->{
+        l.registerCallback((i) -> {
             System.out.printf("received %d\n", i);
             p.arrive();
         });
@@ -60,7 +82,7 @@ public class Test {
         System.out.println("sending 1");
         s.push(1);
         p.register();
-        
+
         p.arriveAndAwaitAdvance();
 
         System.out.println("done");
@@ -132,10 +154,10 @@ public class Test {
                     return n;
                 });
 
-                if (numDelivered.get() == MapConfig.MAX_SENT)
+                if (numDelivered.get() == MapConfig.MAX_NUMBER)
                     return;
 
-                if (++numIterations > MapConfig.MAX_SENT * 10) {
+                if (++numIterations > MapConfig.MAX_NUMBER * 10) {
                     System.out.printf(
                             "mp appears to have stalled. successfully delivered %d and received %d messages.\n",
                             numDelivered.get(), numReceived.get());

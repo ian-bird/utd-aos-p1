@@ -1,4 +1,4 @@
-package utd.aos.p1;
+package utd.aos.p1.utils;
 
 public class Pair<K, V> {
     private K k;

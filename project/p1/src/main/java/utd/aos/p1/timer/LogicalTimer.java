@@ -2,7 +2,7 @@ package utd.aos.p1.timer;
 
 import java.util.PriorityQueue;
 
-import utd.aos.p1.Pair;
+import utd.aos.p1.utils.Pair;
 
 public class LogicalTimer implements Timer {
     private PriorityQueue<Pair<Integer, Runnable>> waiting;

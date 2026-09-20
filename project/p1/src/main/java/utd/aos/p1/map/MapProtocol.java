@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import utd.aos.p1.MapConfig;
 import utd.aos.p1.chan.BufferedChan;
 import utd.aos.p1.chan.Chan;
+import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.timer.Timer;
@@ -114,7 +114,7 @@ public class MapProtocol<T> implements Chan<T> {
 	private synchronized void updateStateReceived() {
 		// if passive and less than max sent, switch to active asleep on receiving a
 		// message
-		if (s != NodeState.PASSIVE || totalSent >= MapConfig.MAX_SENT)
+		if (s != NodeState.PASSIVE || totalSent >= MapConfig.MAX_NUMBER)
 			return;
 
 		// init data for this
