@@ -1,5 +1,6 @@
 package utd.aos.p1.utils;
 
+// models a pair of values.
 public class Pair<K, V> {
     private K k;
     private V v;

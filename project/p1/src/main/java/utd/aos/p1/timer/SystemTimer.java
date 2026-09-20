@@ -2,10 +2,11 @@ package utd.aos.p1.timer;
 
 import java.util.concurrent.CompletableFuture;
 
+// a timer that uses the actual system clock. 
 public class SystemTimer implements Timer {
    public SystemTimer() {
     }
-
+    
     public void callbackIn(int ms, Runnable cb) {
         CompletableFuture.runAsync(() -> {
             try {

@@ -15,11 +15,11 @@ import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.Sender;
 import utd.aos.p1.timer.SystemTimer;
 import utd.aos.p1.utils.Pair;
-import utd.aos.p1.utils.Slurper;
+import utd.aos.p1.utils.FileUtil;
 
 public class Main {
 	public static void main(String[] args) throws FileNotFoundException, IOException, InterruptedException {
-		MapConfig.loadConfig(Slurper.slurp("project/p1/src/main/resources/testconfig.txt"));
+		MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/testconfig.txt"));
 
 		String myName = InetAddress.getLocalHost().getHostName().split("\\.")[0];
 		int myNodeNum = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getKey();
@@ -35,7 +35,7 @@ public class Main {
 			outgoing.add(new Sender<>(InetAddress.getByName(p.getKey()), p.getValue(), (i) -> i.toString()));
 		}
 
-		// set up the progotocl
+		// set up the protocol
 		MapProtocol<Integer> proto = new MapProtocol<Integer>(incoming, outgoing, new SystemTimer(),
 				new Rng((int) System.currentTimeMillis()), myNodeNum == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 

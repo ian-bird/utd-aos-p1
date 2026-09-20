@@ -11,7 +11,18 @@ import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.timer.Timer;
 
-
+// This is an implementation of the map protocol that conforms to the channel abstraction, allowing
+// for testing of components independently of this implementation.
+// The protocol is defined as follows:
+//
+// ‹ While a node is active, it sends anywhere from minPerActive to maxPerActive messages, and
+// then turns passive. For each message, it makes a uniformly random selection of one of its
+// neighbors as the destination. Also, if the node stays active after sending a message, then it
+// waits for at least minSendDelay time units before sending the next message.
+// ‹ Only an active node can send a message.
+// ‹ A passive node, on receiving a message, becomes active if it has sent fewer than maxNumber
+// messages (summed over all active intervals). Otherwise, it stays passive.
+//
 public class MapProtocol<T> implements Chan<T> {
 	private Chan<T> inbox;
 	private Chan<T> outbox;
@@ -45,7 +56,7 @@ public class MapProtocol<T> implements Chan<T> {
 		});
 
 		// if we start in sleep we need to enter it properly.
-		if(init == NodeState.ACTIVE_SLEEP)
+		if (init == NodeState.ACTIVE_SLEEP)
 			enterSleep();
 
 		// we get a new message to send, try to deliver it if possible.
@@ -56,7 +67,7 @@ public class MapProtocol<T> implements Chan<T> {
 					o.get(rng.pull().orElseThrow(() -> new RuntimeException()) % o.size())
 							.push(outbox.pull().orElse(v));
 					updateStateSent();
-					
+
 					// that element has been consumed; remove it.
 					outbox.pull();
 				}

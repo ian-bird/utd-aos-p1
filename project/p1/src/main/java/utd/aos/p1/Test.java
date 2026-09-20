@@ -19,7 +19,7 @@ import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.Sender;
 import utd.aos.p1.pusher.SubscriberManager;
 import utd.aos.p1.timer.LogicalTimer;
-import utd.aos.p1.utils.Slurper;
+import utd.aos.p1.utils.FileUtil;
 
 class Incrementable {
     private int i;
@@ -48,7 +48,7 @@ public class Test {
     }
 
     private static void testConfig() throws FileNotFoundException, IOException {
-        MapConfig.loadConfig(Slurper.slurp("project/p1/src/main/resources/config.txt"));
+        MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
         System.out.printf("neighbor 1 of node 4 (should be 0): %d\n", MapConfig.NEIGHBORS.get(4).get(0));
     }
 

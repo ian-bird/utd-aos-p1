@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+// core functionality of notifying clients of a new value on push.
+// this is widely used and must be synchronized.
+//
+// placing the code here means there cannot be forgotten synchronize keywords
+// elsewhere in the program.
 public class SubscriberManager<T> implements Pusher<T> {
     private List<Consumer<T>> subscribers;
 

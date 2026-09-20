@@ -10,12 +10,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+// abstracts a TCP socket to the pusher interface.
+// This one listens to the socket and sends values to its callback when they're received.
+// the push value is unoperative.
 public class Listener<T> implements Pusher<T> {
 	private SubscriberManager<T> subs;
 	private ServerSocket s;
 	private Socket clientSocket;
 	private Function<String, T> builder;
 
+	// creates a new listener on the specified port. the builder allows
+	// objects to be returned from the listener rather than just strings.
 	public Listener(Integer port, Function<String, T> builder) throws IOException {
 		this.subs = new SubscriberManager<>();
 		this.builder = builder;
@@ -39,6 +44,7 @@ public class Listener<T> implements Pusher<T> {
 		subs.registerCallback(cb);
 	}
 
+	// utility function. Infinite loop that waits on the socket and runs in a promise that will never return.
 	private void listen() {
 		while (true) {
 			try {
@@ -46,18 +52,6 @@ public class Listener<T> implements Pusher<T> {
 				subs.push(builder.apply(r.readLine()));
 			} catch (Exception _ex) {
 			}
-		}
-	}
-
-	private Optional<T> tryToReceive() {
-		try {
-			if (clientSocket.getInputStream().available() == 0)
-				return Optional.empty();
-
-			BufferedReader r = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			return Optional.of(builder.apply(r.readLine()));
-		} catch (Exception _ex) {
-			return Optional.empty();
 		}
 	}
 }
