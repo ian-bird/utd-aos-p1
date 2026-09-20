@@ -20,9 +20,16 @@ public class Listener<T> implements Pusher<T> {
 		this.subs = new SubscriberManager<>();
 		this.builder = builder;
 		this.s = new ServerSocket(port); // need to assign this to the obj so it'll close
-		this.clientSocket = s.accept();
-
-		CompletableFuture.runAsync(this::listen);
+		
+		CompletableFuture.runAsync(()->{
+			try {
+				this.clientSocket = s.accept();
+				this.listen();
+			} catch(Exception ex) {
+				System.err.println("failed to open socket");
+				System.exit(1);
+			}
+		});
 	}
 
 	public void push(T _v) {

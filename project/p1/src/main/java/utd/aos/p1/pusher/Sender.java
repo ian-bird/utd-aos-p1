@@ -13,10 +13,11 @@ public class Sender<T> implements Pusher<T> {
     private PrintWriter out;
     private Function<T, String> toString;
 
-    Sender(InetAddress ip, int port, Function<T, String> toString) throws IOException {
+    public Sender(InetAddress ip, int port, Function<T, String> toString) throws IOException {
         this.subs = new SubscriberManager<>();
         this.clientSocket = new Socket(ip, port);
         this.out = new PrintWriter(clientSocket.getOutputStream(), true);
+        this.toString = toString;
     }
 
     public void push(T v) {
