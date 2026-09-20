@@ -1,22 +1,23 @@
+import pusher.SubscriberManager;
 
 public class Sender<T> implements Pusher<T> {
     private Socket clientSocket;
-    private List<Consumer<T>> subscribers;
+    private SubscriberManager<T> subs;
     private PrintWriter out;
     private Function<T, String> toString;
 
     Sender(int ip, int port, Function<T, String> toString) {
-        this.subscribers = new ArrayList<Consumer<T>>();
+        this.subs = new SubscriberManager();
         this.clientSocket = new Socket(ip, port);
         this.out = new PrintWriter(clientSocket.getOutputStream(), true);
     }
 
-    public synchronized void push(T v) {
+    public void push(T v) {
         out.println(v.toString());
-        subscribers.map((s) -> s.accept(v));
+        subs.push(v);
     }
 
-    public synchronized void registerCallback(Consumer<T> cb) {
-        subscribers.add(cb);
+    public void registerCallback(Consumer<T> cb) {
+        subs.registerCallback(cb);
     }
 }

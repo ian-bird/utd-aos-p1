@@ -3,6 +3,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import pusher.SubscriberManager;
 import utdaosp1.src.MapConfig;
 
 public enum NodeState {
@@ -16,7 +17,6 @@ public class MapProtocol<T> implements Chan<T> {
 	private Chan<T> outbox;
 	private Timer timer;
 	private Puller<Integer> rng;
-	private List<Consumer<T>> subscribers;
 
 	private Pusher<T> input;
 	private List<Pusher<T>> outputs;
@@ -29,7 +29,6 @@ public class MapProtocol<T> implements Chan<T> {
 	MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
 		this.inbox = new BufferedChan<T>();
 		this.outbox = new BufferedChan<T>();
-		this.subscribers = new ArrayList<>();
 		this.timer = timer;
 		this.rng = rng;
 		this.input = i;
@@ -58,11 +57,7 @@ public class MapProtocol<T> implements Chan<T> {
 	}
 
 	public Optional<T> pull() {
-
-		return inbox.pull().map((v) -> {
-			subscribers.stream().peek((s) -> s.accept(v));
-			return v;
-		});
+		return inbox.pull();
 	}
 
 	public void push(T v) {

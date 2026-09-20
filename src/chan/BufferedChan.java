@@ -1,11 +1,11 @@
 
 public class BufferedChan<T> implements Chan<T> {
     private List<T> queue;
-    private List<Runnable<T>> subscribers;
+    private SubscriberManager subs;
 
     BufferedChan() {
         this.queue = new ArrayList<>();
-        this.subscribers = new ArrayList<>();
+        this.subs = new SubscriberManager<>();
     }
 
     public synchronized Optional<T> pull() {
@@ -16,12 +16,15 @@ public class BufferedChan<T> implements Chan<T> {
         return first;
     }
 
-    public synchronized void push(T v) {
-        queue.add(v);
-        subscribers.stream().peek((s) -> s.accept(v));
+    public void push(T v) {
+        subs.push(v);
+        
+        synchronized(this) {
+            queue.add(v);
+        }
     }
 
-    public synchronized void registerCallback(Runnable<T> cb) {
-        subscribers.add(cb);
+    public void registerCallback(Runnable<T> cb) {
+        subs.registerCallback(cb);
     }
 }

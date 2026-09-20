@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 import java.util.List;
 
+import pusher.SubscriberManager;
+
 public class Main {
 	public static void main() {
 
@@ -16,12 +18,12 @@ public class Main {
 			Timer timer = new LogicalTimer();
 			Rng rand = new Rng(0);
 
-			Pusher<Int> input = new DumbPusher<>();
+			Pusher<Int> input = new SubscriberManager<>();
 
 			int nums[] = { 1, 2, 3, 4, 5 };
 			int numDelivered = 0;
 
-			List<Pusher<Int>> outputs = new ArrayList<>(new DumbPusher<>());
+			List<Pusher<Int>> outputs = new ArrayList<>(new SubscriberManager<>());
 			outputs[0].registerCallback((i) -> {
 				if (i != nums[numDelivered++]) {
 					System.out.printf("%dth sent value was not expected: %d\n", numReceived - 1, n);
