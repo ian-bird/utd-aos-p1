@@ -2,8 +2,8 @@ package utd.aos.p1.timer;
 
 import java.util.concurrent.CompletableFuture;
 
-class SystemTimer implements Timer {
-    SystemTimer() {
+public class SystemTimer implements Timer {
+   public SystemTimer() {
     }
 
     public void callbackIn(int ms, Runnable cb) {

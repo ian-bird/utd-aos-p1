@@ -19,6 +19,7 @@ import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.Sender;
 import utd.aos.p1.pusher.SubscriberManager;
 import utd.aos.p1.timer.LogicalTimer;
+import utd.aos.p1.utils.Slurper;
 
 class Incrementable {
     private int i;
@@ -42,28 +43,16 @@ public class Test {
         // testMap(NodeState.ACTIVE_SLEEP, 0);
 
         // testListenerAndSender();
-
-        testConfig();
+        
+        // testConfig();
     }
 
-    static String slurp(String path) throws FileNotFoundException, IOException {
-        StringBuilder resultStringBuilder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(path));) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                resultStringBuilder.append(line).append("\n");
-            }
-        }
-
-        return resultStringBuilder.toString();
-    }
-
-    static void testConfig() throws FileNotFoundException, IOException {
-        MapConfig.loadConfig(slurp("/Users/ianbird/src/utd-aos-p1/project/p1/src/main/resources/config.txt"));
+    private static void testConfig() throws FileNotFoundException, IOException {
+        MapConfig.loadConfig(Slurper.slurp("project/p1/src/main/resources/config.txt"));
         System.out.printf("neighbor 1 of node 4 (should be 0): %d\n", MapConfig.NEIGHBORS.get(4).get(0));
     }
 
-    static void testListenerAndSender() throws UnknownHostException, IOException, InterruptedException {
+    private static void testListenerAndSender() throws UnknownHostException, IOException, InterruptedException {
         InetAddress ip = InetAddress.getByName("localhost");
         int port = 9006;
         Listener<Integer> l = new Listener<>(port, Integer::parseInt);
@@ -90,7 +79,7 @@ public class Test {
 
     // unit test for the map protocol. Uses deterministic rng, a deterministic
     // logical clock and a mocked socket to enable consistent, isolated testing.
-    static void testMap(NodeState initialState, int rngSeed) throws RuntimeException {
+    private static void testMap(NodeState initialState, int rngSeed) throws RuntimeException {
         List<Integer> actions = new ArrayList<Integer>();
 
         Incrementable numDelivered = new Incrementable(0);
