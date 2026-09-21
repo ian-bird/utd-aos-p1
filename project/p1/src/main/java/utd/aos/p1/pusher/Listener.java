@@ -24,12 +24,12 @@ public class Listener<T> implements Pusher<T> {
 		this.subs = new SubscriberManager<>();
 		this.builder = builder;
 		this.s = new ServerSocket(port); // need to assign this to the obj so it'll close
-		
-		CompletableFuture.runAsync(()->{
+
+		CompletableFuture.runAsync(() -> {
 			try {
 				this.clientSocket = s.accept();
 				this.listen();
-			} catch(Exception ex) {
+			} catch (Exception ex) {
 				System.err.println("failed to open socket");
 				System.exit(1);
 			}
@@ -43,14 +43,14 @@ public class Listener<T> implements Pusher<T> {
 		subs.registerCallback(cb);
 	}
 
-	// utility function. Infinite loop that waits on the socket and runs in a promise that will never return.
+	// utility function. Infinite loop that waits on the socket and runs in a
+	// promise that will never return.
 	private void listen() {
-		while (true) {
-			try {
-				BufferedReader r = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+		try {
+			BufferedReader r = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			while (true)
 				subs.push(builder.apply(r.readLine()));
-			} catch (Exception _ex) {
-			}
+		} catch (Exception _ex) {
 		}
 	}
 }

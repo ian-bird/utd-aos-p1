@@ -38,11 +38,11 @@ class Incrementable {
 
 public class Test {
     public static void main(String[] _args) throws Exception {
-        // testMap(NodeState.ACTIVE_SLEEP, 3);
+        testMap(NodeState.ACTIVE_SLEEP, 3);
 
-        // testListenerAndSender();
+        testListenerAndSender();
         
-        // testConfig();
+        testConfig();
     }
 
     private static void testConfig() throws FileNotFoundException, IOException {
@@ -55,7 +55,7 @@ public class Test {
         int port = 9006;
         Listener<Integer> l = new Listener<>(port, Integer::parseInt);
         Sender<Integer> s = new Sender<>(ip, port, (i) -> i.toString());
-        Phaser p = new Phaser(1);
+        Phaser p = new Phaser(3);
 
         l.registerCallback((i) -> {
             System.out.printf("received %d\n", i);
@@ -64,11 +64,9 @@ public class Test {
 
         System.out.println("sending 0");
         s.push(0);
-        p.register();
 
         System.out.println("sending 1");
         s.push(1);
-        p.register();
 
         p.arriveAndAwaitAdvance();
 
