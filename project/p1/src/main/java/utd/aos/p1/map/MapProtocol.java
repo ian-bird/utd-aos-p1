@@ -11,128 +11,136 @@ import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.timer.Timer;
 
-// This is an implementation of the map protocol that conforms to the channel abstraction, allowing
+
+enum Operation {
+	MSG_TO_SEND,
+	MSG_RECEIVED,
+	TIME_UP
+}
+
+// This is an implementation of the map protocol that conforms to the channel
+// abstraction, allowing
 // for testing of components independently of this implementation.
 // The protocol is defined as follows:
 //
-// ‹ While a node is active, it sends anywhere from minPerActive to maxPerActive messages, and
-// then turns passive. For each message, it makes a uniformly random selection of one of its
-// neighbors as the destination. Also, if the node stays active after sending a message, then it
+// ‹ While a node is active, it sends anywhere from minPerActive to maxPerActive
+// messages, and
+// then turns passive. For each message, it makes a uniformly random selection
+// of one of its
+// neighbors as the destination. Also, if the node stays active after sending a
+// message, then it
 // waits for at least minSendDelay time units before sending the next message.
 // ‹ Only an active node can send a message.
-// ‹ A passive node, on receiving a message, becomes active if it has sent fewer than maxNumber
+// ‹ A passive node, on receiving a message, becomes active if it has sent fewer
+// than maxNumber
 // messages (summed over all active intervals). Otherwise, it stays passive.
 //
 public class MapProtocol<T> implements Chan<T> {
-	private Chan<T> inbox;
-	private Chan<T> outbox;
-	private Timer timer;
-	private Puller<Integer> rng;
+    private Chan<T> inbox;
+    private Chan<T> outbox;
+    private Timer timer;
+    private Puller<Integer> rng;
 
-	private Pusher<T> input;
-	private List<Pusher<T>> outputs;
-	private NodeState s;
+    private BufferedChan<Operation> workQueue;
 
-	private int toSend;
-	private int sentThisPeriod;
-	private int totalSent;
+    private Pusher<T> input;
+    private List<Pusher<T>> outputs;
+    private NodeState s;
 
-	public MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
-		this.inbox = new BufferedChan<T>();
-		this.outbox = new BufferedChan<T>();
-		this.timer = timer;
-		this.rng = rng;
-		this.input = i;
-		this.outputs = o;
-		this.s = init;
+    private int toSend;
+    private int sentThisPeriod;
+    private int totalSent;
 
-		this.sentThisPeriod = 0;
-		this.totalSent = 0;
+    public MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
+        this.inbox = new BufferedChan<T>();
+        this.outbox = new BufferedChan<T>();
+        this.timer = timer;
+        this.rng = rng;
+        this.input = i;
+        this.outputs = o;
+        this.s = init;
 
-		// new items from the socket are pushed into the inbox
-		this.input.registerCallback((v) -> {
-			inbox.push(v);
-			updateStateReceived();
-		});
+        this.workQueue = new BufferedChan<Operation>();
 
-		// if we start in sleep we need to enter it properly.
-		if (init == NodeState.ACTIVE_SLEEP)
-			enterSleep();
+        this.sentThisPeriod = 0;
+        this.totalSent = 0;
 
-		// we get a new message to send, try to deliver it if possible.
-		this.outbox.registerCallback((v) -> {
-			synchronized (this) {
-				// if we're ready, then we're waiting for a message to come in. This is it!
-				if (s == NodeState.ACTIVE_READY) {
-					o.get(rng.pull().orElseThrow(() -> new RuntimeException()) % o.size())
-							.push(outbox.pull().orElse(v));
-					updateStateSent();
+        // new items from the socket are pushed into the inbox
+        this.input.registerCallback((v) -> {
+            inbox.push(v);
+            workQueue.push(Operation.MSG_RECEIVED);
+        });
 
-					// that element has been consumed; remove it.
-					outbox.pull();
-				}
-			}
+        // if we start in sleep we need to enter it properly.
+        if (init == NodeState.ACTIVE_SLEEP)
+            timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
 
-		});
-	}
+        // we get a new message to send, try to deliver it if possible.
+        this.outbox.registerCallback((v) -> {
+            workQueue.push(Operation.MSG_TO_SEND);
+        });
 
-	public Optional<T> pull() {
-		return inbox.pull();
-	}
+        // set up the state machine.
+        workQueue.registerCallback((op) -> {
+            workQueue.pull(); // discard this item to keep the buffer empty
 
-	public void push(T v) {
-		outbox.push(v);
-	}
+            switch (op) {
+                case TIME_UP:
+                    if (s != NodeState.ACTIVE_SLEEP)
+                        break;
 
-	public void registerCallback(Consumer<T> cb) {
-		inbox.registerCallback(cb);
-	}
+                    this.outbox.pull().ifPresentOrElse((toSend) -> {
+                        send(toSend);
+                    }, () -> {
+                        s = NodeState.ACTIVE_READY;
+                    });
+                    break;
 
-	// update the state when a message is sent
-	private synchronized void updateStateSent() {
-		sentThisPeriod++;
-		totalSent++;
+                case MSG_TO_SEND:
+                    if (s != NodeState.ACTIVE_READY)
+                        break;
 
-		// if this is the limit for what we can send, enter passive mode.
-		if (sentThisPeriod >= toSend) {
-			s = NodeState.PASSIVE;
-			return;
-		}
+                    send(this.outbox.pull().get());
+                    break;
 
-		enterSleep();
-	}
+                case MSG_RECEIVED:
+                    if (s != NodeState.PASSIVE || totalSent >= MapConfig.MAX_NUMBER)
+                        break;
 
-	// register a callback for when the min send delay has passed.
-	// it'll change the state to active ready and then try to deliver a message fi
-	// there is one.
-	private synchronized void enterSleep() {
-		s = NodeState.ACTIVE_SLEEP;
+                    sentThisPeriod = 0;
+                    toSend = MapConfig.MIN_PER_ACTIVE + rng.pull().orElseThrow(() -> new RuntimeException())
+                            % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
+                    s = NodeState.ACTIVE_SLEEP;
+                    timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
+                    break;
+            }
+        });
+    }
 
-		timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> {
-			synchronized (this) {
-				s = NodeState.ACTIVE_READY;
-				outbox.pull().map((msg) -> {
-					outputs.get(rng.pull().orElseThrow(() -> new RuntimeException()) % outputs.size()).push(msg);
-					updateStateSent();
+    public Optional<T> pull() {
+        return inbox.pull();
+    }
 
-					return null;
-				});
-			}
-		});
-	}
+    public void push(T v) {
+        outbox.push(v);
+    }
 
-	// update state when a message is received
-	private synchronized void updateStateReceived() {
-		// if passive and less than max sent, switch to active asleep on receiving a
-		// message
-		if (s != NodeState.PASSIVE || totalSent >= MapConfig.MAX_NUMBER)
-			return;
+    public void registerCallback(Consumer<T> cb) {
+        inbox.registerCallback(cb);
+    }
 
-		// init data for this
-		sentThisPeriod = 0;
-		toSend = MapConfig.MIN_PER_ACTIVE + rng.pull().orElseThrow(() -> new RuntimeException())
-				% (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
+    // sends a message, update counts, changes state appropriately.
+    private void send(T what) {
+        outputs.get(rng.pull().get() % outputs.size()).push(what);
+        sentThisPeriod++;
+        totalSent++;
 
-		enterSleep();
-	}
+        if (sentThisPeriod >= toSend) {
+            s = NodeState.PASSIVE;
+            return;
+        }
+
+        s = NodeState.ACTIVE_SLEEP;
+        timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
+    }
 }

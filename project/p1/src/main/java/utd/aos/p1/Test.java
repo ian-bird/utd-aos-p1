@@ -38,7 +38,7 @@ class Incrementable {
 
 public class Test {
     public static void main(String[] _args) throws Exception {
-        // testMap(NodeState.ACTIVE_SLEEP, 0);
+        testMap(NodeState.ACTIVE_SLEEP, 0);
 
         // testListenerAndSender();
         
