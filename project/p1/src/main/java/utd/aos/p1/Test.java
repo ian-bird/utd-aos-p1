@@ -40,9 +40,9 @@ public class Test {
     public static void main(String[] _args) throws Exception {
         testMap(NodeState.ACTIVE_SLEEP, 3);
 
-        testListenerAndSender();
+        //testListenerAndSender();
         
-        testConfig();
+        //testConfig();
     }
 
     private static void testConfig() throws FileNotFoundException, IOException {

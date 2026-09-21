@@ -36,17 +36,16 @@ enum Operation {
 // messages (summed over all active intervals). Otherwise, it stays passive.
 //
 public class MapProtocol<T> implements Chan<T> {
-	private Chan<T> inbox;
-	private Chan<T> outbox;
-	private Timer timer;
-	private Puller<Integer> rng;
-
+	private BufferedChan<T> inbox;
+	private BufferedChan<T> outbox;
 	private UnbufferedChan<Operation> workQueue;
-
+	
 	private Pusher<T> input;
 	private List<Pusher<T>> outputs;
+	private Timer timer;
+	private Puller<Integer> rng;
+	
 	private NodeState s;
-
 	private int toSend;
 	private int sentThisPeriod;
 	private int totalSent;
