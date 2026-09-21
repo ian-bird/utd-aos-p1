@@ -16,8 +16,15 @@ public class SubscriberManager<T> implements Pusher<T> {
         this.subscribers = new ArrayList<>();
     }
 
-    public synchronized void push(T v) {
-        for(Consumer<T> subscriber : subscribers)
+    public void push(T v) {
+        List<Consumer<T>> subs;
+
+        // atomically get the subs
+        synchronized(this) {
+            subs = subscribers;
+        }
+
+        for(Consumer<T> subscriber : subs)
             subscriber.accept(v);
     }
 

@@ -38,7 +38,7 @@ class Incrementable {
 
 public class Test {
     public static void main(String[] _args) throws Exception {
-        testMap(NodeState.ACTIVE_SLEEP, 0);
+        // testMap(NodeState.ACTIVE_SLEEP, 3);
 
         // testListenerAndSender();
         
@@ -108,7 +108,7 @@ public class Test {
 
         try {
             while (true) {
-                int nextAction = rand.pull().orElseThrow(() -> new RuntimeException()) % 3;
+                int nextAction = rand.pull().get() % 3;
                 actions.add(nextAction);
 
                 switch (nextAction) {

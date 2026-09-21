@@ -1,6 +1,0 @@
-# six global parameters (see above)
-1 6 10 100 2000 15
-0 Ians-MacBook-Air 9006 # nodeID hostName listenPort
-
-
-0 # space delimited list of neighbors for node 0
