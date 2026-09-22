@@ -38,11 +38,58 @@ class Incrementable {
 
 public class Test {
     public static void main(String[] _args) throws Exception {
-        testMap(NodeState.ACTIVE_SLEEP, 3);
+        // testMap(NodeState.ACTIVE_SLEEP, 3);
 
-        //testListenerAndSender();
-        
-        //testConfig();
+        // testListenerAndSender();
+
+        // testConfig();
+
+        localIntegrationTest(2);
+    }
+
+    private static void localIntegrationTest(int rngSeed) throws FileNotFoundException, IOException, RuntimeException {
+        // load the config
+        MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
+
+        // rng
+        Rng rng = new Rng(rngSeed);
+
+        // set up the channels and timers
+        List<Pusher<Integer>> inputChannels = new ArrayList<>();
+        List<LogicalTimer> timers = new ArrayList<>();
+        for (int i = 0; i < MapConfig.NUM_NODES; i++) {
+            inputChannels.add(new SubscriberManager<>());
+            timers.add(new LogicalTimer());
+        }
+
+        List<MapProtocol<Integer>> nodes = new ArrayList<>();
+        for (int i = 0; i < MapConfig.NUM_NODES; i++) {
+            // outputs to its neighbors
+            List<Pusher<Integer>> outputs = MapConfig.NEIGHBORS.get(i).stream().map((n) -> inputChannels.get(n))
+                    .toList();
+
+            MapProtocol<Integer> p = new MapProtocol<>(inputChannels.get(i), outputs, timers.get(i), rng,
+                    i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+
+            // fill the mailbox
+            for (int j = 0; j < MapConfig.MAX_NUMBER; j++)
+                p.push(i * 100 + j);
+
+            int nodeIndex = i;
+            p.registerCallback((v)->{
+                if(v % 100 + 1 == MapConfig.MAX_NUMBER)
+                    System.out.printf("node %d completed.\n", v / 100);
+            });
+
+            nodes.add(p);
+        }
+
+        for (int i = 0; i < 300; i++) {
+            LogicalTimer t = timers.get(rng.pull().get() % timers.size());
+            if (t.emptyP())
+                continue;
+            t.force();
+        }
     }
 
     private static void testConfig() throws FileNotFoundException, IOException {

@@ -6,10 +6,10 @@ import java.util.function.Consumer;
 
 import utd.aos.p1.chan.BufferedChan;
 import utd.aos.p1.chan.Chan;
-import utd.aos.p1.chan.UnbufferedChan;
 import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
+import utd.aos.p1.pusher.UnbufferedChan;
 import utd.aos.p1.timer.Timer;
 
 enum Operation {
@@ -40,7 +40,6 @@ public class MapProtocol<T> implements Chan<T> {
 	private BufferedChan<T> outbox;
 	private UnbufferedChan<Operation> workQueue;
 	
-	private Pusher<T> input;
 	private List<Pusher<T>> outputs;
 	private Timer timer;
 	private Puller<Integer> rng;
@@ -55,7 +54,7 @@ public class MapProtocol<T> implements Chan<T> {
 		this.outbox = new BufferedChan<T>();
 		this.timer = timer;
 		this.rng = rng;
-		this.input = i;
+
 		this.outputs = o;
 		this.s = init;
 
@@ -65,7 +64,7 @@ public class MapProtocol<T> implements Chan<T> {
 		this.totalSent = 0;
 
 		// new items from the socket are pushed into the inbox
-		this.input.registerCallback((v) -> {
+		i.registerCallback((v) -> {
 			inbox.push(v);
 			workQueue.push(Operation.MSG_RECEIVED);
 		});

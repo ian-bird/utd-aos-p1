@@ -3,7 +3,6 @@ package utd.aos.p1.config;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import utd.aos.p1.utils.Pair;
 
@@ -21,12 +20,12 @@ public class MapConfig {
 	public static HashMap<Integer, Pair<String, Integer>> ADDRESSES_BY_NODE_NUM;
 	public static List<List<Integer>> NEIGHBORS;
 
-	// set up the configuration via a file formatted according to the project 1 specifications
+	// set up the configuration via a file formatted according to the project 1
+	// specifications
 	public static void loadConfig(String fileContents) {
 		List<String> commentedLines = split(fileContents, "\n");
-		List<String> lines = commentedLines.stream().map((l) -> l.split("#")[0]).filter((l) -> !l.isEmpty())
-				.collect(Collectors.toList());
-		List<Integer> nums = split(lines.getFirst(), " ").stream().map(Integer::parseInt).collect(Collectors.toList());
+		List<String> lines = commentedLines.stream().map((l) -> l.split("#")[0]).filter((l) -> !l.isEmpty()).toList();
+		List<Integer> nums = split(lines.getFirst(), " ").stream().map(Integer::parseInt).toList();
 
 		NUM_NODES = nums.get(0);
 		MIN_PER_ACTIVE = nums.get(1);
@@ -47,13 +46,11 @@ public class MapConfig {
 		}
 
 		NEIGHBORS = lines.subList(1 + NUM_NODES, 1 + 2 * NUM_NODES).stream()
-				.map((l) -> split(l, " ").stream().map(Integer::parseInt).collect(Collectors.toList()))
-				.collect(Collectors.toList());
+				.map((l) -> split(l, " ").stream().map(Integer::parseInt).toList()).toList();
 	}
 
 	// utility function
 	private static List<String> split(String s, String on) {
-		return Arrays.asList(s.split(on)).stream().filter((l) -> !l.isEmpty())
-				.collect(Collectors.toList());
+		return Arrays.asList(s.split(on)).stream().filter((l) -> !l.isEmpty()).toList();
 	}
 }
