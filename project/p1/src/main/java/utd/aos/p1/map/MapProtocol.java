@@ -9,8 +9,8 @@ import utd.aos.p1.chan.Chan;
 import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
-import utd.aos.p1.pusher.UnbufferedChan;
 import utd.aos.p1.timer.Timer;
+
 
 enum Operation {
 	MSG_TO_SEND,
@@ -36,105 +36,111 @@ enum Operation {
 // messages (summed over all active intervals). Otherwise, it stays passive.
 //
 public class MapProtocol<T> implements Chan<T> {
-	private BufferedChan<T> inbox;
-	private BufferedChan<T> outbox;
-	private UnbufferedChan<Operation> workQueue;
-	
-	private List<Pusher<T>> outputs;
-	private Timer timer;
-	private Puller<Integer> rng;
-	
-	private NodeState s;
-	private int toSend;
-	private int sentThisPeriod;
-	private int totalSent;
+    private Chan<T> inbox;
+    private Chan<T> outbox;
+    private Timer timer;
+    private Puller<Integer> rng;
 
-	public MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
-		this.inbox = new BufferedChan<T>();
-		this.outbox = new BufferedChan<T>();
-		this.timer = timer;
-		this.rng = rng;
+    private BufferedChan<Operation> workQueue;
 
-		this.outputs = o;
-		this.s = init;
+    private Pusher<T> input;
+    private List<Pusher<T>> outputs;
+    private NodeState s;
 
-		this.workQueue = new UnbufferedChan<Operation>();
+    private int toSend;
+    private int sentThisPeriod;
+    private int totalSent;
 
-		this.sentThisPeriod = 0;
-		this.totalSent = 0;
+    public MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
+        this.inbox = new BufferedChan<T>();
+        this.outbox = new BufferedChan<T>();
+        this.timer = timer;
+        this.rng = rng;
+        this.input = i;
+        this.outputs = o;
+        this.s = init;
 
-		// new items from the socket are pushed into the inbox
-		i.registerCallback((v) -> {
-			inbox.push(v);
-			workQueue.push(Operation.MSG_RECEIVED);
-		});
+        this.workQueue = new BufferedChan<Operation>();
 
-		// if we start in sleep we need to enter it properly.
-		if (init == NodeState.ACTIVE_SLEEP)
-			timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
+        this.sentThisPeriod = 0;
+        this.totalSent = 0;
 
-		// we get a new message to send, try to deliver it if possible.
-		this.outbox.registerCallback((v) -> {
-			workQueue.push(Operation.MSG_TO_SEND);
-		});
+        // new items from the socket are pushed into the inbox
+        this.input.registerCallback((v) -> {
+            inbox.push(v);
+            workQueue.push(Operation.MSG_RECEIVED);
+        });
 
-		// set up the state machine.
-		workQueue.registerCallback((op) -> {
-			switch (op) {
-				case TIME_UP:
-					if (s != NodeState.ACTIVE_SLEEP)
-						break;
+        // if we start in sleep we need to enter it properly.
+        if (init == NodeState.ACTIVE_SLEEP)
+            timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
 
-					this.outbox.pull().ifPresentOrElse(this::send, () -> {
-						s = NodeState.ACTIVE_READY;
-					});
-					break;
+        // we get a new message to send, try to deliver it if possible.
+        this.outbox.registerCallback((v) -> {
+            workQueue.push(Operation.MSG_TO_SEND);
+        });
 
-				case MSG_TO_SEND:
-					if (s != NodeState.ACTIVE_READY)
-						break;
+        // set up the state machine.
+        workQueue.registerCallback((op) -> {
+            workQueue.pull(); // discard this item to keep the buffer empty
 
-					send(this.outbox.pull().get());
-					break;
+            switch (op) {
+                case TIME_UP:
+                    if (s != NodeState.ACTIVE_SLEEP)
+                        break;
 
-				case MSG_RECEIVED:
-					if (s != NodeState.PASSIVE || totalSent >= MapConfig.MAX_NUMBER)
-						break;
+                    this.outbox.pull().ifPresentOrElse((toSend) -> {
+                        send(toSend);
+                    }, () -> {
+                        s = NodeState.ACTIVE_READY;
+                    });
+                    break;
 
-					sentThisPeriod = 0;
-					toSend = MapConfig.MIN_PER_ACTIVE
-							+ rng.pull().get() % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
-					s = NodeState.ACTIVE_SLEEP;
-					timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
-					break;
-			}
-		});
-	}
+                case MSG_TO_SEND:
+                    if (s != NodeState.ACTIVE_READY)
+                        break;
 
-	public Optional<T> pull() {
-		return inbox.pull();
-	}
+                    send(this.outbox.pull().get());
+                    break;
 
-	public void push(T v) {
-		outbox.push(v);
-	}
+                case MSG_RECEIVED:
+                    if (s != NodeState.PASSIVE || totalSent >= MapConfig.MAX_NUMBER)
+                        break;
 
-	public void registerCallback(Consumer<T> cb) {
-		inbox.registerCallback(cb);
-	}
+                    sentThisPeriod = 0;
+                    toSend = MapConfig.MIN_PER_ACTIVE + rng.pull().orElseThrow(() -> new RuntimeException())
+                            % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
+                    s = NodeState.ACTIVE_SLEEP;
+                    timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
+                    break;
+            }
+        });
+    }
 
-	// sends a message, update counts, changes state appropriately.
-	private void send(T what) {
-		outputs.get(rng.pull().get() % outputs.size()).push(what);
-		sentThisPeriod++;
-		totalSent++;
+    public Optional<T> pull() {
+        return inbox.pull();
+    }
 
-		if (sentThisPeriod >= toSend) {
-			s = NodeState.PASSIVE;
-			return;
-		}
+    public void push(T v) {
+        outbox.push(v);
+    }
 
-		s = NodeState.ACTIVE_SLEEP;
-		timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
-	}
+    public void registerCallback(Consumer<T> cb) {
+        inbox.registerCallback(cb);
+    }
+
+    // sends a message, update counts, changes state appropriately.
+    private void send(T what) {
+        outputs.get(rng.pull().get() % outputs.size()).push(what);
+        sentThisPeriod++;
+        totalSent++;
+
+        if (sentThisPeriod >= toSend) {
+            s = NodeState.PASSIVE;
+            return;
+        }
+
+        s = NodeState.ACTIVE_SLEEP;
+        timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
+    }
 }
