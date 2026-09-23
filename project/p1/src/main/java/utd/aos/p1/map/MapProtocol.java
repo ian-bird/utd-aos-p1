@@ -11,11 +11,10 @@ import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.timer.Timer;
 
-
 enum Operation {
-	MSG_TO_SEND,
-	MSG_RECEIVED,
-	TIME_UP
+    MSG_TO_SEND,
+    MSG_RECEIVED,
+    TIME_UP
 }
 
 // This is an implementation of the map protocol that conforms to the channel
@@ -64,6 +63,8 @@ public class MapProtocol<T> implements Chan<T> {
 
         this.sentThisPeriod = 0;
         this.totalSent = 0;
+        this.toSend = MapConfig.MIN_PER_ACTIVE + rng.pull().orElseThrow(() -> new RuntimeException())
+                            % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
 
         // new items from the socket are pushed into the inbox
         this.input.registerCallback((v) -> {
@@ -89,9 +90,7 @@ public class MapProtocol<T> implements Chan<T> {
                     if (s != NodeState.ACTIVE_SLEEP)
                         break;
 
-                    this.outbox.pull().ifPresentOrElse((toSend) -> {
-                        send(toSend);
-                    }, () -> {
+                    this.outbox.pull().ifPresentOrElse(this::send, () -> {
                         s = NodeState.ACTIVE_READY;
                     });
                     break;
@@ -131,7 +130,8 @@ public class MapProtocol<T> implements Chan<T> {
 
     // sends a message, update counts, changes state appropriately.
     private void send(T what) {
-        outputs.get(rng.pull().get() % outputs.size()).push(what);
+        int r = rng.pull().get() % outputs.size();
+        outputs.get(r).push(what);
         sentThisPeriod++;
         totalSent++;
 

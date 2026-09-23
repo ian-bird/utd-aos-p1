@@ -15,7 +15,6 @@ import java.util.function.Function;
 public class Listener<T> implements Pusher<T> {
 	private SubscriberManager<T> subs;
 	private ServerSocket s;
-	private Socket clientSocket;
 	private Function<String, T> builder;
 
 	// creates a new listener on the specified port. the builder allows
@@ -26,12 +25,16 @@ public class Listener<T> implements Pusher<T> {
 		this.s = new ServerSocket(port); // need to assign this to the obj so it'll close
 
 		CompletableFuture.runAsync(() -> {
-			try {
-				this.clientSocket = s.accept();
-				this.listen();
-			} catch (Exception ex) {
-				System.err.println("failed to open socket");
-				System.exit(1);
+			while (true) {
+				try {
+					Socket clientSocket = s.accept();
+					CompletableFuture.runAsync(() -> {
+						this.listen(clientSocket);
+					});
+				} catch (Exception ex) {
+					System.err.println("failed to open socket");
+					System.exit(1);
+				}
 			}
 		});
 	}
@@ -45,9 +48,9 @@ public class Listener<T> implements Pusher<T> {
 
 	// utility function. Infinite loop that waits on the socket and runs in a
 	// promise that will never return.
-	private void listen() {
+	private void listen(Socket s) {
 		try {
-			BufferedReader r = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream()));
 			while (true)
 				subs.push(builder.apply(r.readLine()));
 		} catch (Exception _ex) {

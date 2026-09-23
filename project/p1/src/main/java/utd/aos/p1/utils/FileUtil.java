@@ -7,7 +7,7 @@ import java.io.IOException;
 
 // helps reduce the amount of code needed to read/(and later write) to a file.
 public class FileUtil {
-    // pull a string at path into a string. Throw an error if there was a rpboelm.
+    // pull a string at path into a string. Throw an error if there was a problem.
     public static String slurp(String path) throws FileNotFoundException, IOException {
         StringBuilder resultStringBuilder = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(path));) {

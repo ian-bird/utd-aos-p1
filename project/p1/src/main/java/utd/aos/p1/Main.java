@@ -41,7 +41,8 @@ public class Main {
 
 		// register a callback to log when we receive stuff
 		proto.registerCallback((i) -> {
-			System.out.printf("received %d\n", i);
+			if(i % 100 + 1 == MapConfig.MAX_NUMBER)
+				System.out.printf("node %d completed.\n", i / 10000);
 		});
 
 		// saturate the queue of stuff to send out

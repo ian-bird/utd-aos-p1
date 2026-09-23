@@ -20,6 +20,7 @@ import utd.aos.p1.timer.LogicalTimer;
 import utd.aos.p1.timer.SystemTimer;
 import utd.aos.p1.timer.Timer;
 import utd.aos.p1.utils.FileUtil;
+import utd.aos.p1.utils.Pair;
 
 class Incrementable {
     private int i;
@@ -39,23 +40,78 @@ class Incrementable {
 }
 
 public class Test {
-    public static void main(String[] _args) throws Exception {
+    public static void main(String[] args) throws Exception {
         // testMap(NodeState.ACTIVE_SLEEP, 3);
 
         // testListenerAndSender();
 
         // testConfig();
 
-        System.out.println("logical clock:");
-        logicalIntegrationTest(2);
-        System.out.println("wall clock:");
-        wallClockIntegrationTest(2);
+        // System.out.println("logical clock:");
+        // logicalIntegrationTest(2);
+        // System.out.println("wall clock:");
+        //wallClockIntegrationTest(2);
+        try {
+        fullLocalIntegrationTest(Integer.parseInt(args[0]));
+        } catch (Exception _e) {
+            System.out.println("encounted fatal error.");
+        } finally {
+            System.out.println("exiting.");
+        }
+    }
+
+    private static void fullLocalIntegrationTest(int myNodeNum) throws IOException, InterruptedException {
+        MapConfig.loadConfig(FileUtil.slurp("testconfig.txt"));
+
+		// set up my input channel
+        String vName = MapConfig.ADDRESSES_BY_NODE_NUM.get(myNodeNum).getKey();
+		int port = MapConfig.NODE_AND_PORT_BY_HOST.get(vName).getValue();
+		Listener<Integer> incoming = new Listener<>(port, Integer::parseInt);
+
+		// set up my output channels
+		List<Pusher<Integer>> outgoing = new ArrayList<>();
+		for (int neighborNode : MapConfig.NEIGHBORS.get(myNodeNum)) {
+			Pair<String, Integer> p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
+
+            int retries = 0;
+            while(true) {
+                try {
+                    Sender<Integer> s = new Sender<>(InetAddress.getByName("localhost"), p.getValue(), (i) -> i.toString());                    
+        			outgoing.add(s);
+                    break;
+                } catch (IOException ie) {
+                    if(retries++ > 10) {
+                        System.out.printf("failed to acquire socket for node %\n", neighborNode);
+                        throw ie;
+                    }
+                    Thread.sleep(100);
+                }
+            }
+		}
+
+		// set up the protocol
+		MapProtocol<Integer> proto = new MapProtocol<Integer>(incoming, outgoing, new SystemTimer(),
+				new Rng((int) System.currentTimeMillis()), myNodeNum == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+
+		// register a callback to log when we receive stuff
+		proto.registerCallback((i) -> {
+                if(i % 1000 + 1 == MapConfig.MAX_NUMBER)
+				    System.out.printf("%d finished\n", i / 1000);
+		});
+
+		// saturate the queue of stuff to send out
+		for (int i = 0; i < MapConfig.MAX_NUMBER; i++)
+			proto.push(myNodeNum * 1000 + i);
+
+		
+		// wait until we're killed externally
+		Thread.sleep(5_000);
     }
 
     private static void wallClockIntegrationTest(int rngSeed)
             throws FileNotFoundException, IOException, RuntimeException {
         // load the config
-        MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
+        MapConfig.loadConfig(FileUtil.slurp("config.txt"));
 
         // rng
         Rng rng = new Rng(rngSeed);
