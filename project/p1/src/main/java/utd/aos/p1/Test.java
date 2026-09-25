@@ -50,14 +50,14 @@ public class Test {
         // System.out.println("logical clock:");
         // logicalIntegrationTest(2);
         // System.out.println("wall clock:");
-        //wallClockIntegrationTest(2);
-        try {
-        fullLocalIntegrationTest(Integer.parseInt(args[0]));
-        } catch (Exception _e) {
-            System.out.println("encounted fatal error.");
-        } finally {
-            System.out.println("exiting.");
-        }
+        wallClockIntegrationTest(2);
+        // try {
+        // fullLocalIntegrationTest(Integer.parseInt(args[0]));
+        // } catch (Exception _e) {
+        //     System.out.println("encounted fatal error.");
+        // } finally {
+        //     System.out.println("exiting.");
+        // }
     }
 
     private static void fullLocalIntegrationTest(int myNodeNum) throws IOException, InterruptedException {

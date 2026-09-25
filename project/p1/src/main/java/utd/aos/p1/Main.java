@@ -31,6 +31,20 @@ public class Main {
 		// set up my output channels
 		List<Pusher<Integer>> outgoing = new ArrayList<>();
 		for (int neighborNode : MapConfig.NEIGHBORS.get(myNodeNum)) {
+		    int retries = 0;
+            while(true) {
+                try {
+                    Sender<Integer> s = new Sender<>(InetAddress.getByName("localhost"), p.getValue(), (i) -> i.toString());                    
+        			outgoing.add(s);
+                    break;
+                } catch (IOException ie) {
+                    if(retries++ > 10) {
+                        System.out.printf("failed to acquire socket for node %\n", neighborNode);
+                        throw ie;
+                    }
+                    Thread.sleep(100);
+                }
+            }
 			Pair<String, Integer> p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
 			outgoing.add(new Sender<>(InetAddress.getByName(p.getKey()), p.getValue(), (i) -> i.toString()));
 		}
