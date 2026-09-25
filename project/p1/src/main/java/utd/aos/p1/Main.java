@@ -19,9 +19,10 @@ import utd.aos.p1.utils.FileUtil;
 
 public class Main {
 	public static void main(String[] args) throws FileNotFoundException, IOException, InterruptedException {
-		MapConfig.loadConfig(FileUtil.slurp("config.txt"));
+		MapConfig.loadConfig(FileUtil.slurp("project/p1/target/classes/config.txt"));
 
 		String myName = InetAddress.getLocalHost().getHostName().split("\\.")[0];
+		System.out.println(myName);
 		int myNodeNum = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getKey();
 
 		// set up my input channel
