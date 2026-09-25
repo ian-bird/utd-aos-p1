@@ -19,7 +19,7 @@ import utd.aos.p1.utils.FileUtil;
 
 public class Main {
 	public static void main(String[] args) throws FileNotFoundException, IOException, InterruptedException {
-		MapConfig.loadConfig(FileUtil.slurp("project/p1/target/classes/config.txt"));
+		MapConfig.loadConfig(FileUtil.slurp("config.txt"));
 
 		String myName = InetAddress.getLocalHost().getHostName().split("\\.")[0];
 		System.out.println(myName);
