@@ -43,7 +43,7 @@ public class Main {
 					break;
 				} catch (IOException ie) {
 					if (retries++ > 10) {
-						System.out.printf("failed to acquire socket for node %\n", neighborNode);
+						System.out.printf("failed to acquire socket for node %d\n", neighborNode);
 						throw ie;
 					}
 					Thread.sleep(200);
