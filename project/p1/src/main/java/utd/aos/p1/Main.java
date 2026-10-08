@@ -49,9 +49,6 @@ public class Main {
 					Thread.sleep(200);
 				}
 			}
-
-			Pair<String, Integer> p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
-			outgoing.add(new Sender<>(InetAddress.getByName(p.getKey()), p.getValue(), (i) -> i.toString()));
 		}
 
 		// set up the protocol

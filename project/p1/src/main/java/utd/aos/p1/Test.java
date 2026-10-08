@@ -111,7 +111,7 @@ public class Test {
     private static void wallClockIntegrationTest(int rngSeed)
             throws FileNotFoundException, IOException, RuntimeException {
         // load the config
-        MapConfig.loadConfig(FileUtil.slurp("config.txt"));
+        MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
 
         // rng
         Rng rng = new Rng(rngSeed);

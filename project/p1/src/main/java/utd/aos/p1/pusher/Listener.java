@@ -23,6 +23,7 @@ public class Listener<T> implements Pusher<T> {
 		this.subs = new SubscriberManager<>();
 		this.builder = builder;
 		this.s = new ServerSocket(port); // need to assign this to the obj so it'll close
+		s.close();
 
 		CompletableFuture.runAsync(() -> {
 			while (true) {
