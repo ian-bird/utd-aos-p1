@@ -23,7 +23,6 @@ public class Listener<T> implements Pusher<T> {
 		this.subs = new SubscriberManager<>();
 		this.builder = builder;
 		this.s = new ServerSocket(port); // need to assign this to the obj so it'll close
-		s.close();
 
 		CompletableFuture.runAsync(() -> {
 			while (true) {
@@ -50,10 +49,10 @@ public class Listener<T> implements Pusher<T> {
 	// utility function. Infinite loop that waits on the socket and runs in a
 	// promise that will never return.
 	private void listen(Socket s) {
-		try {
-			BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream()));
-			while (true)
-				subs.push(builder.apply(r.readLine()));
+		try (s; BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
+			String line;
+			while ((line = r.readLine()) != null)
+				subs.push(builder.apply(line));
 		} catch (Exception _ex) {
 		}
 	}
