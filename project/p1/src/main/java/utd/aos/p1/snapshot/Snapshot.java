@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -74,36 +73,39 @@ public class Snapshot<T> {
 
                     // if this is a new request, start recording for it.
                     if (r.id > mostRecent) {
-                        
+
                         VectorClock c;
+                        int mr;
                         synchronized (this) {
                             this.mostRecentRequest = r.id;
                             c = new VectorClock(numProcesses, this.clock.vector);
-                            mostRecent = r.id;
+                            mr = r.id;
                         }
 
-                        System.out.printf("%d received snapshot request %d at time %s. Waiting for responses from %s\n", pid, r.id, c.toString(), neighbors.stream().filter((n) -> n != r.source).toList().toString());
+                        System.out.printf(
+                                "%d received snapshot request %d at time %s. Waiting for responses from %s\n",
+                                pid, r.id, c.toString(),
+                                neighbors.stream().filter((n) -> n != r.source).toList().toString());
 
                         // and create the collector for in flight messsages. Note, we're not requesting
                         // from or expecting
                         // a response from the source.
                         synchronized (this) {
                             this.clock = this.clock.receive(r.timeSent);
-                            this.inProgressSnapshots.add(new Response<T>(mostRecent, pid, r.source, c,
+                            this.inProgressSnapshots.add(new Response<T>(mr, pid, r.source, c,
                                     neighbors.stream().filter((n) -> n != r.source).toList()));
                         }
-                        
-                        // forward the request to everyone but the person that informed us, and ACK them.
-                        for (int i = 0; i < o.size(); i++) {
-                            if (neighbors.get(i) == r.source) {
-                                o.get(i).push(new Acknowledge<>(mostRecent, pid, i));
-                                continue;
-                            }
 
-                            o.get(i).push(new Request<>(mostRecent, pid, c));
+                        // forward the request to everyone but the person that informed us, and ACK
+                        // them.
+                        for (int i = 0; i < o.size(); i++) {
+                            o.get(i).push(new Acknowledge<>(mr, pid, i));
+                            if (neighbors.get(i) == r.source)
+                                continue;
+
+                            o.get(i).push(new Request<>(mr, pid, c));
                         }
 
-                        
                     } else {
                         // if it's a request we're aware of, give an empty response.
                         boolean ok = false;
@@ -130,18 +132,19 @@ public class Snapshot<T> {
                 // response, in which
                 // case we can finally respond to our parent.
                 case Response<T> res:
-                    Optional<Response<T>> completed;
+                    List<Response<T>> completed;
 
                     System.out.printf("%d got response from %d for %d.\n", pid, res.source, res.id);
 
                     synchronized (this) {
                         inProgressSnapshots.forEach((snap) -> snap.ack(res));
 
-                        completed = inProgressSnapshots.stream().filter(Response::isDone).findFirst();
-                        inProgressSnapshots = inProgressSnapshots.stream().filter((r) -> !r.isDone()).collect(Collectors.toCollection(ArrayList::new));
+                        completed = inProgressSnapshots.stream().filter(Response::isDone).toList();
+                        inProgressSnapshots = inProgressSnapshots.stream().filter((r) -> !r.isDone())
+                                .collect(Collectors.toCollection(ArrayList::new));
                     }
 
-                    completed.ifPresent((r) -> {
+                    completed.forEach((r) -> {
                         System.out.printf("%d got all responses for %d. Sending to %d\n", pid, r.id, r.sendingTo);
 
                         // if the snapshot request originated here and we've collected everything,
@@ -158,20 +161,19 @@ public class Snapshot<T> {
                             // otherwise, send it to the observer.
                         } else {
                             for (int i = 0; i < o.size(); i++) {
-                                if (neighbors.get(i) == r.sendingTo) {
+                                if (neighbors.get(i) == r.sendingTo)
                                     o.get(i).push(r);
-                                }
                             }
                         }
                     });
 
                     break;
-                    case Acknowledge<T> ack:
-                        synchronized(this) {
-                            inProgressSnapshots.forEach((ss)->ss.ack(ack));
-                        }
+                case Acknowledge<T> ack:
+                    synchronized (this) {
+                        inProgressSnapshots.forEach((ss) -> ss.ack(ack));
+                    }
                     break;
-                }
+            }
         });
 
         this.outputs = new ArrayList<>();

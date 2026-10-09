@@ -12,6 +12,7 @@ import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.map.MapProtocol;
 import utd.aos.p1.map.NodeState;
 import utd.aos.p1.puller.Rng;
+import utd.aos.p1.pusher.Fifo;
 import utd.aos.p1.pusher.Listener;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.Sender;
@@ -74,7 +75,7 @@ public class Test {
         List<Pusher<Message<Integer>>> inputChannels = new ArrayList<>();
         List<Timer> timers = new ArrayList<>();
         for (int i = 0; i < MapConfig.NUM_NODES; i++) {
-            inputChannels.add(new SubscriberManager<>());
+            inputChannels.add(new Fifo<>());
             timers.add(new SystemTimer());
         }
 
