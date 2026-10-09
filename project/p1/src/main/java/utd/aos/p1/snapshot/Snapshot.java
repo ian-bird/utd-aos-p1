@@ -83,7 +83,7 @@ public class Snapshot<T> {
                         int mr;
                         synchronized (this) {
                             this.mostRecentRequest = r.id;
-                            c = new VectorClock(numProcesses, this.clock.vector);
+                            c = new VectorClock(pid, this.clock.vector);
                             mr = r.id;
                         }
 
@@ -213,7 +213,7 @@ public class Snapshot<T> {
         // fake broadcast by sending the same timestamp to everyone.
         VectorClock c;
         synchronized (this) {
-            c = new VectorClock(this.clock.vector.size(), this.clock.vector);
+            c = new VectorClock(this.clock.associatedProcess, this.clock.vector);
         }
 
         for (Pusher<Message<T>> output : this.trueOutputs) {
