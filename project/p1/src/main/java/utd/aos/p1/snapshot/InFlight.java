@@ -16,6 +16,6 @@ public final class InFlight<T> implements Message<T> {
     }
 
     public String toString() {
-        return Integer.valueOf(source).toString() + " -> " + Integer.valueOf(dest).toString() + ": " + timeSent.toString();
+        return Integer.valueOf(source).toString() + " -> " + Integer.valueOf(dest).toString() + ": " + message.toString() + " @ " + timeSent.toString();
     }
 }

@@ -13,6 +13,7 @@ public final class Response<T> implements Message<T> {
     public int source;
     public int sendingTo;
     public Map<Integer, VectorClock> states;
+    private List<Integer> listeningTo;
     private List<Integer> waitingFor;
 
     public Response(int id, int source, int sendingTo, VectorClock state, List<Integer> waitingFor) {
@@ -21,13 +22,15 @@ public final class Response<T> implements Message<T> {
         this.sendingTo = sendingTo;
         this.inFlightMessages = new ArrayList<>();
         this.waitingFor = waitingFor;
+        this.listeningTo = waitingFor;
         this.states = new HashMap<>();
         this.states.put(source, state);
     }
 
     public void addMessage(InFlight<T> message) {
         synchronized (this) {
-            inFlightMessages.add(message);
+            if(this.listeningTo.contains(message.source))
+                inFlightMessages.add(message);
         }
     }
 
@@ -46,8 +49,26 @@ public final class Response<T> implements Message<T> {
             return;
 
         this.waitingFor = this.waitingFor.stream().filter((i) -> i != r.source).toList();
+        this.listeningTo = this.listeningTo.stream().filter((i)-> i != r.source).toList();
 
-        states.putAll(r.states);
+        r.states.forEach((k,v)->{
+            if(states.containsKey(k))
+                return;
+            states.put(k,v);
+        });
+
+
         inFlightMessages.addAll(r.inFlightMessages);
+    }
+
+    // if we get an ack then we aren't listening to that process anymore.
+    public synchronized void ack(Acknowledge<T> r) {
+        if (r.id != this.id)
+            return;
+
+        if(!listeningTo.contains(r.source))
+            return;
+
+        this.listeningTo = this.listeningTo.stream().filter((i)-> i != r.source).toList();
     }
 }

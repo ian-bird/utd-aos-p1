@@ -106,7 +106,7 @@ public class Test {
         }
 
         snapshot.capture((response)->{
-            System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n", response.inFlightMessages.toString(), response.id, response.states.toString());
+            System.out.printf("{\n\t\"inFlight\": %s,\n\t\"id\": %d,\n\t\"states\": %s\n}\n", response.inFlightMessages.toString(), response.id, response.states.toString());
         });
 
         Thread.sleep(1_000);

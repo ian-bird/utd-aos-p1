@@ -30,7 +30,7 @@ public class VectorClock {
             zipped.add(new Pair<>(vector.get(i), c.vector.get(i)));
 
         List<Integer> v = zipped.stream().map((p) -> p.getKey() > p.getValue() ? p.getKey() : p.getValue()).toList();
-        return new VectorClock(associatedProcess, v);
+        return new VectorClock(associatedProcess, v).send();
     }
 
     public VectorClock send() {

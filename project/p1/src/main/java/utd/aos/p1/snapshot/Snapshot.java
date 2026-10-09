@@ -92,11 +92,13 @@ public class Snapshot<T> {
                             this.inProgressSnapshots.add(new Response<T>(mostRecent, pid, r.source, c,
                                     neighbors.stream().filter((n) -> n != r.source).toList()));
                         }
-
-                        // forward the request to everyone but the person that informed us
+                        
+                        // forward the request to everyone but the person that informed us, and ACK them.
                         for (int i = 0; i < o.size(); i++) {
-                            if (neighbors.get(i) == r.source)
+                            if (neighbors.get(i) == r.source) {
+                                o.get(i).push(new Acknowledge<>(mostRecent, pid, i));
                                 continue;
+                            }
 
                             o.get(i).push(new Request<>(mostRecent, pid, c));
                         }
@@ -164,17 +166,24 @@ public class Snapshot<T> {
                     });
 
                     break;
-            }
+                    case Acknowledge<T> ack:
+                        synchronized(this) {
+                            inProgressSnapshots.forEach((ss)->ss.ack(ack));
+                        }
+                    break;
+                }
         });
 
         this.outputs = new ArrayList<>();
+        int i = 0;
         for (Pusher<Message<T>> output : o) {
+            int dest = i++;
             Pusher<T> nextOutput = new SubscriberManager<>();
             nextOutput.registerCallback((v) -> {
                 synchronized (this) {
                     this.clock = this.clock.send();
                 }
-                output.push(new InFlight<T>(pid, numProcesses, clock, v));
+                output.push(new InFlight<T>(pid, dest, clock, v));
             });
             this.outputs.add(nextOutput);
         }
