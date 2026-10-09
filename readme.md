@@ -1,3 +1,11 @@
+# Notes on P2:
+
+The snapshot algorithm has been tested locally, using FIFO channels running across several threads.
+
+I tested with delays on propagation of the request/ack messages and confirmed that in-flight message capture works properly.
+
+You can run the local tests by running `utd/aos/p1/Test`
+
 # Steps to run
 
 1. make sure jdk 22 javac and java are on the path

@@ -82,11 +82,6 @@ public class Snapshot<T> {
                             mr = r.id;
                         }
 
-                        System.out.printf(
-                                "%d received snapshot request %d at time %s. Waiting for responses from %s\n",
-                                pid, r.id, c.toString(),
-                                neighbors.stream().filter((n) -> n != r.source).toList().toString());
-
                         // and create the collector for in flight messsages. Note, we're not requesting
                         // from or expecting
                         // a response from the source.
@@ -134,8 +129,6 @@ public class Snapshot<T> {
                 case Response<T> res:
                     List<Response<T>> completed;
 
-                    System.out.printf("%d got response from %d for %d.\n", pid, res.source, res.id);
-
                     synchronized (this) {
                         inProgressSnapshots.forEach((snap) -> snap.ack(res));
 
@@ -145,8 +138,6 @@ public class Snapshot<T> {
                     }
 
                     completed.forEach((r) -> {
-                        System.out.printf("%d got all responses for %d. Sending to %d\n", pid, r.id, r.sendingTo);
-
                         // if the snapshot request originated here and we've collected everything,
                         // then push it to the appropriate collector and remove it.
                         if (r.sendingTo < 0) {
