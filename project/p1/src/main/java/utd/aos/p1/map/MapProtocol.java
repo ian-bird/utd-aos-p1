@@ -44,7 +44,7 @@ public class MapProtocol<T> implements Chan<T> {
 
     private Pusher<T> input;
     private List<Pusher<T>> outputs;
-    private NodeState s;
+    public NodeState s;
 
     private int toSend;
     private int sentThisPeriod;

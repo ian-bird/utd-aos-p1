@@ -6,17 +6,19 @@ import java.util.List;
 import java.util.Map;
 
 import utd.aos.p1.clock.VectorClock;
+import utd.aos.p1.map.NodeState;
+import utd.aos.p1.utils.Pair;
 
 public final class Response<T> implements Message<T> {
     public List<InFlight<T>> inFlightMessages;
     public int id;
     public int source;
     public int sendingTo;
-    public Map<Integer, VectorClock> states;
+    public Map<Integer, Pair<VectorClock, NodeState>> states;
     private List<Integer> listeningTo;
     private List<Integer> waitingFor;
 
-    public Response(int id, int source, int sendingTo, VectorClock state, List<Integer> waitingFor) {
+    public Response(int id, int source, int sendingTo, Pair<VectorClock, NodeState> state, List<Integer> waitingFor) {
         this.id = id;
         this.source = source;
         this.sendingTo = sendingTo;

@@ -25,6 +25,14 @@ import utd.aos.p1.timer.Timer;
 import utd.aos.p1.utils.FileUtil;
 import utd.aos.p1.utils.Pair;
 
+class SettableBool {
+    public boolean b;
+
+    public void set(boolean b) {
+        this.b = b;
+    }
+}
+
 class Incrementable {
     private int i;
 
@@ -84,18 +92,23 @@ public class Test {
         List<MapProtocol<Integer>> nodes = new ArrayList<>();
         for (int i = 0; i < MapConfig.NUM_NODES; i++) {
             // outputs to its neighbors
-            List<Pusher<Message<Integer>>> outputs = MapConfig.NEIGHBORS.get(i).stream().map((n) -> inputChannels.get(n))
+            List<Pusher<Message<Integer>>> outputs = MapConfig.NEIGHBORS.get(i).stream()
+                    .map((n) -> inputChannels.get(n))
                     .toList();
 
             // set up the snapshotter
-            Snapshot<Integer> shot = new Snapshot<>(inputChannels.get(i), outputs, MapConfig.NEIGHBORS.get(i), i, MapConfig.NUM_NODES);
-            if(snapshot == null)
+            Snapshot<Integer> shot = new Snapshot<>(inputChannels.get(i), outputs, MapConfig.NEIGHBORS.get(i), i,
+                    MapConfig.NUM_NODES);
+            if (snapshot == null)
                 snapshot = shot;
 
-            MapProtocol<Integer> p = new MapProtocol<>(shot.input, shot.outputs, timers.get(i), rng, i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+            MapProtocol<Integer> p = new MapProtocol<>(shot.input, shot.outputs, timers.get(i), rng,
+                    i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+
+            shot.client = p;
 
             // fill the mailbox
-            for (int j = 0; j < MapConfig.MAX_NUMBER; j++)
+            for (int j = 0; j < MapConfig.MAX_NUMBER * 2; j++)
                 p.push(i * 100 + j);
 
             p.registerCallback((v) -> {
@@ -106,18 +119,19 @@ public class Test {
             nodes.add(p);
         }
 
-        snapshot.capture((response)->{
-            System.out.printf("{\n\t\"inFlight\": %s,\n\t\"id\": %d,\n\t\"states\": %s\n}\n", response.inFlightMessages.toString(), response.id, response.states.toString());
-        });
-
-        Thread.sleep(1_000);
-
-        snapshot.capture((response)->{
-            System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n", response.inFlightMessages.toString(), response.id, response.states.toString());
-        });
-
         try {
-            Thread.sleep(3_500);
+            while (true) {
+                Thread.sleep(MapConfig.SNAPSHOT_DELAY);
+                SettableBool b = new SettableBool();
+                snapshot.capture((response) -> {
+                    System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n",
+                    response.inFlightMessages.toString(), response.id, response.states.toString());
+                    b.set(response.inFlightMessages.isEmpty()
+                            && response.states.values().stream().allMatch((p) -> p.getValue() == NodeState.PASSIVE));
+                });
+                if (b.b)
+                    throw new InterruptedException();
+            }
         } catch (InterruptedException _ie) {
         }
     }
@@ -125,49 +139,49 @@ public class Test {
     private static void fullLocalIntegrationTest(int myNodeNum) throws IOException, InterruptedException {
         MapConfig.loadConfig(FileUtil.slurp("testconfig.txt"));
 
-		// set up my input channel
+        // set up my input channel
         String vName = MapConfig.ADDRESSES_BY_NODE_NUM.get(myNodeNum).getKey();
-		int port = MapConfig.NODE_AND_PORT_BY_HOST.get(vName).getValue();
-		Listener<Integer> incoming = new Listener<>(port, Integer::parseInt);
+        int port = MapConfig.NODE_AND_PORT_BY_HOST.get(vName).getValue();
+        Listener<Integer> incoming = new Listener<>(port, Integer::parseInt);
 
-		// set up my output channels
-		List<Pusher<Integer>> outgoing = new ArrayList<>();
-		for (int neighborNode : MapConfig.NEIGHBORS.get(myNodeNum)) {
-			Pair<String, Integer> p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
+        // set up my output channels
+        List<Pusher<Integer>> outgoing = new ArrayList<>();
+        for (int neighborNode : MapConfig.NEIGHBORS.get(myNodeNum)) {
+            Pair<String, Integer> p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
 
             int retries = 0;
-            while(true) {
+            while (true) {
                 try {
-                    Sender<Integer> s = new Sender<>(InetAddress.getByName("localhost"), p.getValue(), (i) -> i.toString());                    
-        			outgoing.add(s);
+                    Sender<Integer> s = new Sender<>(InetAddress.getByName("localhost"), p.getValue(),
+                            (i) -> i.toString());
+                    outgoing.add(s);
                     break;
                 } catch (IOException ie) {
-                    if(retries++ > 10) {
+                    if (retries++ > 10) {
                         System.out.printf("failed to acquire socket for node %\n", neighborNode);
                         throw ie;
                     }
                     Thread.sleep(100);
                 }
             }
-		}
+        }
 
-		// set up the protocol
-		MapProtocol<Integer> proto = new MapProtocol<Integer>(incoming, outgoing, new SystemTimer(),
-				new Rng((int) System.currentTimeMillis()), myNodeNum == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+        // set up the protocol
+        MapProtocol<Integer> proto = new MapProtocol<Integer>(incoming, outgoing, new SystemTimer(),
+                new Rng((int) System.currentTimeMillis()), myNodeNum == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 
-		// register a callback to log when we receive stuff
-		proto.registerCallback((i) -> {
-                if(i % 1000 + 1 == MapConfig.MAX_NUMBER)
-				    System.out.printf("%d finished\n", i / 1000);
-		});
+        // register a callback to log when we receive stuff
+        proto.registerCallback((i) -> {
+            if (i % 1000 + 1 == MapConfig.MAX_NUMBER)
+                System.out.printf("%d finished\n", i / 1000);
+        });
 
-		// saturate the queue of stuff to send out
-		for (int i = 0; i < MapConfig.MAX_NUMBER; i++)
-			proto.push(myNodeNum * 1000 + i);
+        // saturate the queue of stuff to send out
+        for (int i = 0; i < MapConfig.MAX_NUMBER; i++)
+            proto.push(myNodeNum * 1000 + i);
 
-		
-		// wait until we're killed externally
-		Thread.sleep(5_000);
+        // wait until we're killed externally
+        Thread.sleep(5_000);
     }
 
     private static void wallClockIntegrationTest(int rngSeed)
