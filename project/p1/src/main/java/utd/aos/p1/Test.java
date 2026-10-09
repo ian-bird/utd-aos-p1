@@ -16,6 +16,8 @@ import utd.aos.p1.pusher.Listener;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.Sender;
 import utd.aos.p1.pusher.SubscriberManager;
+import utd.aos.p1.snapshot.Message;
+import utd.aos.p1.snapshot.Snapshot;
 import utd.aos.p1.timer.LogicalTimer;
 import utd.aos.p1.timer.SystemTimer;
 import utd.aos.p1.timer.Timer;
@@ -50,14 +52,73 @@ public class Test {
         // System.out.println("logical clock:");
         // logicalIntegrationTest(2);
         // System.out.println("wall clock:");
-        wallClockIntegrationTest(2);
-        // try {
-        // fullLocalIntegrationTest(Integer.parseInt(args[0]));
-        // } catch (Exception _e) {
-        //     System.out.println("encounted fatal error.");
-        // } finally {
-        //     System.out.println("exiting.");
-        // }
+        // wallClockIntegrationTest(2);
+        try {
+            localSnapshotTest();
+        } catch (Exception e) {
+            e.printStackTrace(System.out);
+            System.out.println("encounted fatal error.");
+        } finally {
+            System.out.println("exiting.");
+        }
+    }
+
+    private static void localSnapshotTest() throws Exception {
+        // load the config
+        MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
+
+        // rng
+        Rng rng = new Rng(0);
+
+        // set up the channels and timers
+        List<Pusher<Message<Integer>>> inputChannels = new ArrayList<>();
+        List<Timer> timers = new ArrayList<>();
+        for (int i = 0; i < MapConfig.NUM_NODES; i++) {
+            inputChannels.add(new SubscriberManager<>());
+            timers.add(new SystemTimer());
+        }
+
+        Snapshot<Integer> snapshot = null;
+
+        List<MapProtocol<Integer>> nodes = new ArrayList<>();
+        for (int i = 0; i < MapConfig.NUM_NODES; i++) {
+            // outputs to its neighbors
+            List<Pusher<Message<Integer>>> outputs = MapConfig.NEIGHBORS.get(i).stream().map((n) -> inputChannels.get(n))
+                    .toList();
+
+            // set up the snapshotter
+            Snapshot<Integer> shot = new Snapshot<>(inputChannels.get(i), outputs, MapConfig.NEIGHBORS.get(i), i, MapConfig.NUM_NODES);
+            if(snapshot == null)
+                snapshot = shot;
+
+            MapProtocol<Integer> p = new MapProtocol<>(shot.input, shot.outputs, timers.get(i), rng, i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+
+            // fill the mailbox
+            for (int j = 0; j < MapConfig.MAX_NUMBER; j++)
+                p.push(i * 100 + j);
+
+            p.registerCallback((v) -> {
+                if (v % 100 + 1 == MapConfig.MAX_NUMBER)
+                    System.out.printf("node %d completed.\n", v / 100);
+            });
+
+            nodes.add(p);
+        }
+
+        snapshot.capture((response)->{
+            System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n", response.inFlightMessages.toString(), response.id, response.states.toString());
+        });
+
+        Thread.sleep(1_000);
+
+        snapshot.capture((response)->{
+            System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n", response.inFlightMessages.toString(), response.id, response.states.toString());
+        });
+
+        try {
+            Thread.sleep(3_500);
+        } catch (InterruptedException _ie) {
+        }
     }
 
     private static void fullLocalIntegrationTest(int myNodeNum) throws IOException, InterruptedException {

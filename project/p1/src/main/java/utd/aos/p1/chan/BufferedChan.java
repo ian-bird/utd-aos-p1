@@ -5,9 +5,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.SubscriberManager;
 
-public class BufferedChan<T> implements Chan<T> {
+public class BufferedChan<T> implements Chan<T>, Pusher<T> {
     private List<T> queue;
     private SubscriberManager<T> subs;
 
