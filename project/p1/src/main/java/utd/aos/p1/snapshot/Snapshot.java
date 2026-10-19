@@ -5,11 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import utd.aos.p1.chan.BufferedChan;
 import utd.aos.p1.clock.VectorClock;
-import utd.aos.p1.map.MapProtocol;
+import utd.aos.p1.map.NodeState;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.SubscriberManager;
 import utd.aos.p1.utils.Pair;
@@ -27,7 +28,7 @@ public class Snapshot<T> {
     private List<Integer> neighbors;
 
     // dirty hack to access map protocol state
-    public MapProtocol<T> client;
+    public Supplier<NodeState> clientState;
 
     public Snapshot(Pusher<Message<T>> in, List<Pusher<Message<T>>> o, List<Integer> neighbors, int pid,
             int numProcesses) {
@@ -91,11 +92,10 @@ public class Snapshot<T> {
                         // from or expecting
                         // a response from the source.
                         synchronized (this) {
-                            synchronized (client) {
-                                this.clock = this.clock.receive(r.timeSent);
-                                this.inProgressSnapshots.add(new Response<T>(mr, pid, r.source, new Pair<>(c, client.s),
-                                        neighbors.stream().filter((n) -> n != r.source).toList()));
-                            }
+                            this.clock = this.clock.receive(r.timeSent);
+                            this.inProgressSnapshots.add(new Response<T>(mr, pid, r.source, new Pair<>(c, clientState.get()),
+                                neighbors.stream().filter((n) -> n != r.source).toList()));
+
                         }
 
                         // forward the request to everyone but the person that informed us, and ACK
@@ -118,10 +118,8 @@ public class Snapshot<T> {
                                     c = new VectorClock(pid, this.clock.vector);
                                 }
 
-                                synchronized (client) {
-                                    o.get(i).push(new Response<>(r.id, pid, r.source, new Pair<>(c, client.s),
-                                            new ArrayList<>()));
-                                }
+                                o.get(i).push(new Response<>(r.id, pid, r.source, new Pair<>(c, clientState.get()),
+                                    new ArrayList<>()));
                                 ok = true;
                                 break;
                             }
@@ -204,10 +202,8 @@ public class Snapshot<T> {
 
         synchronized (this) {
             this.collectors.put(num, collectResult);
-            synchronized (client) {
-                inProgressSnapshots
-                        .add(new Response<T>(num, pid, -1, new Pair<>(this.clock, client.s), this.neighbors));
-            }
+            inProgressSnapshots
+                .add(new Response<T>(num, pid, -1, new Pair<>(this.clock, clientState.get()), this.neighbors));
         }
 
         // fake broadcast by sending the same timestamp to everyone.

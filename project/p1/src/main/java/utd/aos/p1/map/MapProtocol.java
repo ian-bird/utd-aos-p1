@@ -9,6 +9,7 @@ import utd.aos.p1.chan.Chan;
 import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.puller.Puller;
 import utd.aos.p1.pusher.Pusher;
+import utd.aos.p1.pusher.SubscriberManager;
 import utd.aos.p1.timer.Timer;
 
 enum Operation {
@@ -44,11 +45,12 @@ public class MapProtocol<T> implements Chan<T> {
 
     private Pusher<T> input;
     private List<Pusher<T>> outputs;
-    public NodeState s;
+    private NodeState s;
 
     private int toSend;
     private int sentThisPeriod;
     private int totalSent;
+    public SubscriberManager<Object> OnSleep;
 
     public MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
         this.inbox = new BufferedChan<T>();
@@ -63,8 +65,9 @@ public class MapProtocol<T> implements Chan<T> {
 
         this.sentThisPeriod = 0;
         this.totalSent = 0;
+        this.OnSleep = new SubscriberManager<>();
         this.toSend = MapConfig.MIN_PER_ACTIVE + rng.pull().orElseThrow(() -> new RuntimeException())
-                            % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
+                % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
 
         // new items from the socket are pushed into the inbox
         this.input.registerCallback((v) -> {
@@ -128,6 +131,10 @@ public class MapProtocol<T> implements Chan<T> {
         inbox.registerCallback(cb);
     }
 
+    public synchronized NodeState getState() {
+        return s;
+    }
+
     // sends a message, update counts, changes state appropriately.
     private void send(T what) {
         int r = rng.pull().get() % outputs.size();
@@ -137,9 +144,9 @@ public class MapProtocol<T> implements Chan<T> {
 
         if (sentThisPeriod >= toSend) {
             s = NodeState.PASSIVE;
+            OnSleep.push(new Object());
             return;
         }
-
         s = NodeState.ACTIVE_SLEEP;
         timer.callbackIn(MapConfig.MIN_SEND_DELAY, () -> workQueue.push(Operation.TIME_UP));
     }

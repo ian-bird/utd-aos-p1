@@ -6,9 +6,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Phaser;
 
 import utd.aos.p1.config.MapConfig;
+import utd.aos.p1.huang.HaltDetector;
+import utd.aos.p1.huang.Rational;
 import utd.aos.p1.map.MapProtocol;
 import utd.aos.p1.map.NodeState;
 import utd.aos.p1.puller.Rng;
@@ -72,6 +75,75 @@ public class Test {
         }
     }
 
+    private static void localHaltingTest() throws Exception {
+        // load the config
+        MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
+
+        // rng
+        Rng rng = new Rng(0);
+
+        // set up the channels and timers
+        List<Pusher<Message<Pair<Rational, Optional<Integer>>>>> inputChannels = new ArrayList<>();
+        List<Timer> timers = new ArrayList<>();
+        for (int i = 0; i < MapConfig.NUM_NODES; i++) {
+            inputChannels.add(new Fifo<>());
+            timers.add(new SystemTimer());
+        }
+
+        Snapshot<Pair<Rational, Optional<Integer>>> snapshot = null;
+
+        List<MapProtocol<Integer>> nodes = new ArrayList<>();
+
+        for (int i = 0; i < MapConfig.NUM_NODES; i++) {
+            // outputs to its neighbors
+            List<Pusher<Message<Pair<Rational, Optional<Integer>>>>> outputs = MapConfig.NEIGHBORS.get(i).stream()
+                    .map(inputChannels::get)
+                    .toList();
+
+            // set up the snapshotter
+            Snapshot<Pair<Rational, Optional<Integer>>> shot = new Snapshot<>(inputChannels.get(i), outputs, MapConfig.NEIGHBORS.get(i), i,
+                    MapConfig.NUM_NODES);
+            if (snapshot == null)
+                snapshot = shot;
+
+             // set up the halt detector
+            HaltDetector<Integer> hd = new HaltDetector<>(shot.outputs, shot.input, i == 0, ()-> {
+                System.out.printf("done!\n");
+                System.exit(1);
+            });
+
+            MapProtocol<Integer> p = new MapProtocol<>(hd.in, hd.outs, timers.get(i), rng,
+                    i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
+
+            shot.clientState = p::getState;
+
+            hd.setSleepSource(p.OnSleep);
+            hd.clientState = p::getState;
+
+            // fill the mailbox
+            for (int j = 0; j < MapConfig.MAX_NUMBER * 2; j++)
+                p.push(i * 100 + j);
+
+            p.registerCallback((v) -> {
+                if (v % 100 + 1 == MapConfig.MAX_NUMBER)
+                    System.out.printf("node %d completed.\n", v / 100);
+            });
+
+            nodes.add(p);
+        }
+
+        try {
+            while (true) {
+                Thread.sleep(MapConfig.SNAPSHOT_DELAY);
+                snapshot.capture((response) -> {
+                    System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n",
+                    response.inFlightMessages.toString(), response.id, response.states.toString());
+                });
+            }
+        } catch (InterruptedException _ie) {
+        }
+    }
+
     private static void localSnapshotTest() throws Exception {
         // load the config
         MapConfig.loadConfig(FileUtil.slurp("project/p1/src/main/resources/config.txt"));
@@ -105,7 +177,7 @@ public class Test {
             MapProtocol<Integer> p = new MapProtocol<>(shot.input, shot.outputs, timers.get(i), rng,
                     i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 
-            shot.client = p;
+            shot.clientState = p::getState;
 
             // fill the mailbox
             for (int j = 0; j < MapConfig.MAX_NUMBER * 2; j++)
