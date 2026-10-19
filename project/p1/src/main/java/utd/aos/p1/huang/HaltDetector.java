@@ -47,8 +47,8 @@ public class HaltDetector<T> {
         });
 
         this.outs = new ArrayList<>();
-        for (Pusher<Pair<Rational, Optional<T>>> output : outputs) {
-            BufferedChan<T> nextOutput = new BufferedChan<>();
+        for (var output : outputs) {
+            var nextOutput = new BufferedChan<T>();
             nextOutput.registerCallback((v) -> {
                 Rational half;
                 nextOutput.pull();

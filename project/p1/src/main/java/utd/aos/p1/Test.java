@@ -83,7 +83,7 @@ public class Test {
         Rng rng = new Rng(0);
 
         // set up the channels and timers
-        List<Pusher<Message<Pair<Rational, Optional<Integer>>>>> inputChannels = new ArrayList<>();
+        var inputChannels = new ArrayList<Pusher<Message<Pair<Rational, Optional<Integer>>>>>();
         List<Timer> timers = new ArrayList<>();
         for (int i = 0; i < MapConfig.NUM_NODES; i++) {
             inputChannels.add(new Fifo<>());
@@ -92,27 +92,27 @@ public class Test {
 
         Snapshot<Pair<Rational, Optional<Integer>>> snapshot = null;
 
-        List<MapProtocol<Integer>> nodes = new ArrayList<>();
+        var nodes = new ArrayList<MapProtocol<Integer>>();
 
         for (int i = 0; i < MapConfig.NUM_NODES; i++) {
             // outputs to its neighbors
-            List<Pusher<Message<Pair<Rational, Optional<Integer>>>>> outputs = MapConfig.NEIGHBORS.get(i).stream()
+            var outputs = MapConfig.NEIGHBORS.get(i).stream()
                     .map(inputChannels::get)
                     .toList();
 
             // set up the snapshotter
-            Snapshot<Pair<Rational, Optional<Integer>>> shot = new Snapshot<>(inputChannels.get(i), outputs, MapConfig.NEIGHBORS.get(i), i,
+            var shot = new Snapshot<>(inputChannels.get(i), outputs, MapConfig.NEIGHBORS.get(i), i,
                     MapConfig.NUM_NODES);
             if (snapshot == null)
                 snapshot = shot;
 
              // set up the halt detector
-            HaltDetector<Integer> hd = new HaltDetector<>(shot.outputs, shot.input, i == 0, ()-> {
+            var hd = new HaltDetector<>(shot.outputs, shot.input, i == 0, ()-> {
                 System.out.printf("done!\n");
                 System.exit(1);
             });
 
-            MapProtocol<Integer> p = new MapProtocol<>(hd.in, hd.outs, timers.get(i), rng,
+            var p = new MapProtocol<>(hd.in, hd.outs, timers.get(i), rng,
                     i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 
             shot.clientState = p::getState;

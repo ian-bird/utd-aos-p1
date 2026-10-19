@@ -4,7 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.List;
 
 import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.map.MapProtocol;
@@ -14,30 +13,29 @@ import utd.aos.p1.pusher.Listener;
 import utd.aos.p1.pusher.Pusher;
 import utd.aos.p1.pusher.Sender;
 import utd.aos.p1.timer.SystemTimer;
-import utd.aos.p1.utils.Pair;
 import utd.aos.p1.utils.FileUtil;
 
 public class Main {
 	public static void main(String[] args) throws FileNotFoundException, IOException, InterruptedException {
 		MapConfig.loadConfig(FileUtil.slurp("config.txt"));
 
-		String myName = InetAddress.getLocalHost().getHostName().split("\\.")[0];
+		var myName = InetAddress.getLocalHost().getHostName().split("\\.")[0];
 		System.out.println(myName);
-		int myNodeNum = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getKey();
+		var myNodeNum = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getKey();
 
 		// set up my input channel
-		int port = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getValue();
-		Listener<Integer> incoming = new Listener<>(port, Integer::parseInt);
+		var port = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getValue();
+		var incoming = new Listener<>(port, Integer::parseInt);
 
 		// set up my output channels
-		List<Pusher<Integer>> outgoing = new ArrayList<>();
-		for (int neighborNode : MapConfig.NEIGHBORS.get(myNodeNum)) {
+		var outgoing = new ArrayList<Pusher<Integer>>();
+		for (var neighborNode : MapConfig.NEIGHBORS.get(myNodeNum)) {
 
-			int retries = 0;
+			var retries = 0;
 			while (true) {
 				try {
-					Pair<String, Integer> p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
-					Sender<Integer> s = new Sender<>(InetAddress.getByName(p.getKey().concat(".utdallas.edu")),
+					var p = MapConfig.ADDRESSES_BY_NODE_NUM.get(neighborNode);
+					var s = new Sender<Integer>(InetAddress.getByName(p.getKey().concat(".utdallas.edu")),
 							p.getValue(), (i) -> i.toString());
 					outgoing.add(s);
 					break;
@@ -52,7 +50,7 @@ public class Main {
 		}
 
 		// set up the protocol
-		MapProtocol<Integer> proto = new MapProtocol<Integer>(incoming, outgoing, new SystemTimer(),
+		var proto = new MapProtocol<Integer>(incoming, outgoing, new SystemTimer(),
 				new Rng((int) System.currentTimeMillis()), myNodeNum == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 
 		// register a callback to log when we receive a final message

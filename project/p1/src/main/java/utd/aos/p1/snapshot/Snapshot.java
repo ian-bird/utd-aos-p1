@@ -177,7 +177,7 @@ public class Snapshot<T> {
 
         this.outputs = new ArrayList<>();
         int i = 0;
-        for (Pusher<Message<T>> output : o) {
+        for (var output : o) {
             int dest = i++;
             Pusher<T> nextOutput = new SubscriberManager<>();
             nextOutput.registerCallback((v) -> {
@@ -212,7 +212,7 @@ public class Snapshot<T> {
             c = new VectorClock(this.clock.associatedProcess, this.clock.vector);
         }
 
-        for (Pusher<Message<T>> output : this.trueOutputs) {
+        for (var output : this.trueOutputs) {
 
             output.push(new Request<>(num, this.pid, c));
         }

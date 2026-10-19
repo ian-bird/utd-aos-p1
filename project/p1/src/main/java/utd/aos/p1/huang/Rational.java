@@ -18,8 +18,8 @@ public class Rational {
 
     public Rational add(Rational b) {
         if(b.denominator != this.denominator) {
-            Rational thisCopy = new Rational(numerator.multiply(b.denominator), denominator.multiply(b.denominator));
-            Rational bCopy = new Rational(b.numerator.multiply(denominator), b.denominator.multiply(denominator));
+            var thisCopy = new Rational(numerator.multiply(b.denominator), denominator.multiply(b.denominator));
+            var bCopy = new Rational(b.numerator.multiply(denominator), b.denominator.multiply(denominator));
             return simplify(new Rational(thisCopy.numerator.add(bCopy.numerator), thisCopy.denominator));
         }
 
@@ -35,7 +35,7 @@ public class Rational {
     }
 
     private Rational simplify(Rational r) {
-        BigInteger divBy = r.numerator.gcd(r.denominator);
+        var divBy = r.numerator.gcd(r.denominator);
         return new Rational(r.numerator.divide(divBy), r.denominator.divide(divBy));
     }
 

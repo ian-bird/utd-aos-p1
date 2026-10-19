@@ -9,8 +9,8 @@ import java.io.IOException;
 public class FileUtil {
     // pull a string at path into a string. Throw an error if there was a problem.
     public static String slurp(String path) throws FileNotFoundException, IOException {
-        StringBuilder resultStringBuilder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(path));) {
+        var resultStringBuilder = new StringBuilder();
+        try (var reader = new BufferedReader(new FileReader(path));) {
             String line;
             while ((line = reader.readLine()) != null) {
                 resultStringBuilder.append(line).append("\n");
