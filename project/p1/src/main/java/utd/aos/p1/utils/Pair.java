@@ -19,6 +19,6 @@ public class Pair<K, V> {
     }
 
     public String toString() {
-        return "#(" + k.toString() + ", " + v.toString() + ")";
+        return "{\"key\": " + k.toString() + ", \"value\": " + v.toString() + "}";
     }
 }

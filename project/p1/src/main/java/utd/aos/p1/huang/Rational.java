@@ -38,4 +38,8 @@ public class Rational {
         BigInteger divBy = r.numerator.gcd(r.denominator);
         return new Rational(r.numerator.divide(divBy), r.denominator.divide(divBy));
     }
+
+    public String toString() {
+        return "{\"numerator\": " + numerator.toString() + ", \"denominator\": " + denominator.toString() + "}";
+    }
 }

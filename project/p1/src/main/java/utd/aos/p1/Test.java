@@ -66,7 +66,7 @@ public class Test {
         // System.out.println("wall clock:");
         // wallClockIntegrationTest(2);
         try {
-            localSnapshotTest();
+            localHaltingTest();
         } catch (Exception e) {
             e.printStackTrace(System.out);
             System.out.println("encounted fatal error.");
