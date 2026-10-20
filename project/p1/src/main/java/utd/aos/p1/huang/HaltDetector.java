@@ -2,7 +2,6 @@ package utd.aos.p1.huang;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 import utd.aos.p1.chan.BufferedChan;
@@ -12,28 +11,31 @@ import utd.aos.p1.utils.Pair;
 
 public class HaltDetector<T> {
     private Rational state;
-    private List<Pusher<Pair<Rational, Optional<T>>>> outputs;
+    private List<Pusher<Pair<Rational, T>>> outputs;
     private boolean source;
     private Runnable onHalt;
+    private T emptyValue;
 
     public List<Pusher<T>> outs;
     public Pusher<T> in;
 
     public Supplier<NodeState> clientState;
 
-    public HaltDetector(List<Pusher<Pair<Rational, Optional<T>>>> outputs, Pusher<Pair<Rational, Optional<T>>> input,
-            boolean source, Runnable onHalt) {
+    public HaltDetector(List<Pusher<Pair<Rational, T>>> outputs, Pusher<Pair<Rational, T>> input,
+            boolean source, Runnable onHalt, T emptyValue) {
         state = new Rational(source ? 1 : 0, 1);
 
         this.in = new BufferedChan<>();
         this.onHalt = onHalt;
         this.outputs = outputs;
+        this.emptyValue = emptyValue;
 
         input.registerCallback((p) -> {
-            p.getValue().ifPresent(in::push);
+            if(p.getValue() != emptyValue)
+                in.push(p.getValue());
 
             if(clientState.get() == NodeState.PASSIVE && !source){
-                outputs.get(0).push(new Pair<>(p.getKey(), Optional.empty()));
+                outputs.get(0).push(new Pair<>(p.getKey(), emptyValue));
             } else {
                 Rational stateVal;
                 synchronized (this) {
@@ -56,7 +58,7 @@ public class HaltDetector<T> {
                     half = state.multiply(new Rational(1, 2));
                     state = half;
                 }
-                output.push(new Pair<>(half, Optional.of(v)));
+                output.push(new Pair<>(half, v));
             });
             this.outs.add(nextOutput);
         }
@@ -79,7 +81,7 @@ public class HaltDetector<T> {
                     s = state;
                     state = new Rational(0, 1);
                 }
-                outputs.get(0).push(new Pair<>(s, Optional.empty()));
+                outputs.get(0).push(new Pair<>(s, emptyValue));
             });
         }
     }

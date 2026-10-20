@@ -1,8 +1,9 @@
 package utd.aos.p1.huang;
 
+import java.io.Serializable;
 import java.math.BigInteger;
 
-public class Rational {
+public class Rational implements Serializable {
     public BigInteger numerator;
     public BigInteger denominator;
 

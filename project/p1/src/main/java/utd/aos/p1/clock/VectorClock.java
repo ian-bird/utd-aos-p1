@@ -1,11 +1,12 @@
 package utd.aos.p1.clock;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import utd.aos.p1.utils.Pair;
 
-public class VectorClock {
+public class VectorClock implements Serializable {
     public List<Integer> vector;
     public int associatedProcess;
 
@@ -60,10 +61,10 @@ public class VectorClock {
     }
 
     public Comparison compare(VectorClock c) {
-        List<Pair<Integer, Integer>> zipped = new ArrayList<>();
+        var zipped = new ArrayList<Pair<Integer, Integer>>();
 
         for(int i = 0; i < vector.size(); i++)
-            zipped.add(new Pair<Integer,Integer>(vector.get(i), c.vector.get(i)));
+            zipped.add(new Pair<>(vector.get(i), c.vector.get(i)));
 
         if(zipped.stream().allMatch((p)->p.getKey() == p.getValue()))
             return Comparison.EQUAL;

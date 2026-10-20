@@ -1,10 +1,15 @@
 package utd.aos.p1;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Phaser;
@@ -83,14 +88,14 @@ public class Test {
         Rng rng = new Rng(0);
 
         // set up the channels and timers
-        var inputChannels = new ArrayList<Pusher<Message<Pair<Rational, Optional<Integer>>>>>();
+        var inputChannels = new ArrayList<Pusher<Message<Pair<Rational, Integer>>>>();
         List<Timer> timers = new ArrayList<>();
         for (int i = 0; i < MapConfig.NUM_NODES; i++) {
             inputChannels.add(new Fifo<>());
             timers.add(new SystemTimer());
         }
 
-        Snapshot<Pair<Rational, Optional<Integer>>> snapshot = null;
+        Snapshot<Pair<Rational, Integer>> snapshot = null;
 
         var nodes = new ArrayList<MapProtocol<Integer>>();
 
@@ -106,18 +111,18 @@ public class Test {
             if (snapshot == null)
                 snapshot = shot;
 
-             // set up the halt detector
-            var hd = new HaltDetector<>(shot.outputs, shot.input, i == 0, ()-> {
+            // set up the halt detector
+            var hd = new HaltDetector<>(shot.outputs, shot.input, i == 0, () -> {
                 System.out.printf("done!\n");
                 System.exit(1);
-            });
+            }, -1);
 
             var p = new MapProtocol<>(hd.in, hd.outs, timers.get(i), rng,
                     i == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 
             shot.clientState = p::getState;
 
-            hd.setSleepSource(p.OnSleep);
+            hd.setSleepSource(p.onSleep);
             hd.clientState = p::getState;
 
             // fill the mailbox
@@ -132,12 +137,45 @@ public class Test {
             nodes.add(p);
         }
 
+        inputChannels.get(0).registerCallback((m) -> {
+            try {
+                System.out.println(m);
+            } catch(Exception _ex) {
+                System.out.println("what thr fuck you cant tostring it");
+            }
+
+            try {
+                System.out.printf("trying to serialize object %s\n", m.getClass().toString());
+                System.out.println("the message is: " + m);
+                System.out.println("!");
+
+                var baos = new ByteArrayOutputStream();
+                var oos = new ObjectOutputStream(baos);
+
+
+
+                oos.writeObject(m);
+                var s = Base64.getEncoder().encodeToString(baos.toByteArray());
+
+                System.out.printf("encoded to %s\n", s);
+
+                var bais = new ByteArrayInputStream(Base64.getDecoder().decode(s));
+                var ois = new ObjectInputStream(bais);
+
+                @SuppressWarnings("unchecked")
+                var mCopy = (Message<Pair<Rational, Integer>>) ois.readObject();
+
+                System.out.printf(">>>> %s %s\n\n", m.toString(), mCopy.toString());
+            } catch (Exception _ex) {
+            }
+        });
+
         try {
             while (true) {
                 Thread.sleep(MapConfig.SNAPSHOT_DELAY);
                 snapshot.capture((response) -> {
                     System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n",
-                    response.inFlightMessages.toString(), response.id, response.states.toString());
+                            response.inFlightMessages.toString(), response.id, response.states.toString());
                 });
             }
         } catch (InterruptedException _ie) {
@@ -197,7 +235,7 @@ public class Test {
                 SettableBool b = new SettableBool();
                 snapshot.capture((response) -> {
                     System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n",
-                    response.inFlightMessages.toString(), response.id, response.states.toString());
+                            response.inFlightMessages.toString(), response.id, response.states.toString());
                     b.set(response.inFlightMessages.isEmpty()
                             && response.states.values().stream().allMatch((p) -> p.getValue() == NodeState.PASSIVE));
                 });

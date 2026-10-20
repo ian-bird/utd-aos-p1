@@ -1,4 +1,6 @@
 package utd.aos.p1.snapshot;
 
-public sealed interface Message<T> permits InFlight, Request, Response, Acknowledge {
+import java.io.Serializable;
+
+public sealed interface Message<T>  extends Serializable permits InFlight, Request, Response, Acknowledge {
 }

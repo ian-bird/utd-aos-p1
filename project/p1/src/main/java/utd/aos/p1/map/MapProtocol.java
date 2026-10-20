@@ -50,7 +50,7 @@ public class MapProtocol<T> implements Chan<T> {
     private int toSend;
     private int sentThisPeriod;
     private int totalSent;
-    public SubscriberManager<Object> OnSleep;
+    public SubscriberManager<Object> onSleep;
 
     public MapProtocol(Pusher<T> i, List<Pusher<T>> o, Timer timer, Puller<Integer> rng, NodeState init) {
         this.inbox = new BufferedChan<T>();
@@ -65,7 +65,7 @@ public class MapProtocol<T> implements Chan<T> {
 
         this.sentThisPeriod = 0;
         this.totalSent = 0;
-        this.OnSleep = new SubscriberManager<>();
+        this.onSleep = new SubscriberManager<>();
         this.toSend = MapConfig.MIN_PER_ACTIVE + rng.pull().orElseThrow(() -> new RuntimeException())
                 % (MapConfig.MAX_PER_ACTIVE - MapConfig.MIN_PER_ACTIVE + 1);
 
@@ -144,7 +144,7 @@ public class MapProtocol<T> implements Chan<T> {
 
         if (sentThisPeriod >= toSend) {
             s = NodeState.PASSIVE;
-            OnSleep.push(new Object());
+            onSleep.push(new Object());
             return;
         }
         s = NodeState.ACTIVE_SLEEP;

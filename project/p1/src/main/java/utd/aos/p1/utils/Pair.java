@@ -1,7 +1,9 @@
 package utd.aos.p1.utils;
 
+import java.io.Serializable;
+
 // models a pair of values.
-public class Pair<K, V> {
+public class Pair<K, V> implements Serializable {
     private K k;
     private V v;
 
