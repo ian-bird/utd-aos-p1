@@ -1,8 +1,10 @@
 package utd.aos.p1;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -29,17 +31,16 @@ import utd.aos.p1.utils.Pair;
 
 public class Main {
 	private static Message<Pair<Rational, Integer>> parseMessage(String s) {
-		try {
-		var bais = new ByteArrayInputStream(Base64.getDecoder().decode(s));
-		var ois = new ObjectInputStream(bais);
+		try(var bais = new ByteArrayInputStream(Base64.getDecoder().decode(s));
+			var ois = new ObjectInputStream(bais)) {
+			
 
-		@SuppressWarnings("unchecked")
-		var result = (Message<Pair<Rational, Integer>>)ois.readObject();
-		ois.close();
-		bais.close();
+			@SuppressWarnings("unchecked")
+			var result = (Message<Pair<Rational, Integer>>) ois.readObject();
 
-		return result;
+			return result;
 		} catch (Exception _ex) {
+			System.out.println("failed to deserialize object.\n");
 			return new Acknowledge<>(0, 0, 0);
 		}
 	}
@@ -78,6 +79,7 @@ public class Main {
 									oos.writeObject(o);
 									result = Base64.getEncoder().encodeToString(baos.toByteArray());
 								} catch (Exception _ex) {
+									System.out.println("failed to serialize object.\n");
 									return "";
 								}
 								return result;
@@ -107,7 +109,8 @@ public class Main {
 		var proto = new MapProtocol<Integer>(hd.in, hd.outs, new SystemTimer(),
 				new Rng((int) System.currentTimeMillis()), myNodeNum == 0 ? NodeState.ACTIVE_SLEEP : NodeState.PASSIVE);
 
-		// snapshots and halt detection are defined in mutual recursion with proto, so finish their config
+		// snapshots and halt detection are defined in mutual recursion with proto, so
+		// finish their config
 		snapshot.clientState = proto::getState;
 
 		hd.setSleepSource(proto.onSleep);
@@ -115,6 +118,7 @@ public class Main {
 
 		// register a callback to log when we receive a final message
 		proto.registerCallback((i) -> {
+			System.out.printf("received %d from %d\n", i % 100, i / 10000);
 			if (i % 100 + 1 == MapConfig.MAX_NUMBER)
 				System.out.printf("node %d completed.\n", i / 10000);
 		});
@@ -124,15 +128,23 @@ public class Main {
 			proto.push(myNodeNum * 10000 + i);
 
 		CompletableFuture.runAsync(() -> {
-			try {
+			if(myNodeNum != 0)
+				return;
+
+			try (var writer = new BufferedWriter(new FileWriter("/home/011/i/ir/irb170030/src/utd-aos-p1/snapshots.txt"))) {
+			    writer.write("---snapshots---\n");
 				while (true) {
 					Thread.sleep(MapConfig.SNAPSHOT_DELAY);
 					snapshot.capture((response) -> {
-						System.out.printf("{\n\t\"inFlight\":%s,\n\t\"id\":%d,\n\t\"states\":%s\n}\n",
-								response.inFlightMessages.toString(), response.id, response.states.toString());
+						try {
+							writer.write(response.states.toString());
+							writer.flush();
+							System.out.println("wrote to file");
+						} catch (IOException _ie) {
+						}
 					});
 				}
-			} catch (InterruptedException _ie) {
+			} catch (Exception _e) {
 			}
 		});
 
