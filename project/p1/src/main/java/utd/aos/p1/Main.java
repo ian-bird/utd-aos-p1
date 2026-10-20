@@ -4,7 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-
 import utd.aos.p1.config.MapConfig;
 import utd.aos.p1.map.MapProtocol;
 import utd.aos.p1.map.NodeState;
@@ -21,7 +20,14 @@ public class Main {
 
 		var myName = InetAddress.getLocalHost().getHostName().split("\\.")[0];
 		System.out.println(myName);
-		var myNodeNum = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getKey();
+
+
+		var maybePair = MapConfig.NODE_AND_PORT_BY_HOST.get(myName);
+		if(maybePair == null)
+			System.exit(1);
+		var myNodeNum = maybePair.getKey();
+
+		
 
 		// set up my input channel
 		var port = MapConfig.NODE_AND_PORT_BY_HOST.get(myName).getValue();
