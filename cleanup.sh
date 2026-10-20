@@ -1,0 +1,47 @@
+killall java
+
+ssh irb170030@csa-dc02 -C "killall java" &
+ssh irb170030@csa-dc03 -C "killall java" &
+ssh irb170030@csa-dc04 -C "killall java" &
+ssh irb170030@csa-dc05 -C "killall java" &
+ssh irb170030@csa-dc06 -C "killall java" &
+
+ssh irb170030@csa-dc08 -C "killall java" &
+ssh irb170030@csa-dc09 -C "killall java" &
+ssh irb170030@csa-dc10 -C "killall java" &
+ssh irb170030@csa-dc11 -C "killall java" &
+ssh irb170030@csa-dc12 -C "killall java" &
+ssh irb170030@csa-dc13 -C "killall java" &
+ssh irb170030@csa-dc14 -C "killall java" &
+ssh irb170030@csa-dc15 -C "killall java" &
+ssh irb170030@csa-dc16 -C "killall java" &
+ssh irb170030@csa-dc17 -C "killall java" &
+ssh irb170030@csa-dc18 -C "killall java" &
+ssh irb170030@csa-dc19 -C "killall java" &
+ssh irb170030@csa-dc20 -C "killall java" &
+ssh irb170030@csa-dc21 -C "killall java" &
+ssh irb170030@csa-dc22 -C "killall java" &
+ssh irb170030@csa-dc23 -C "killall java" &
+ssh irb170030@csa-dc24 -C "killall java" &
+ssh irb170030@csa-dc25 -C "killall java" &
+ssh irb170030@csa-dc26 -C "killall java" &
+ssh irb170030@csa-dc27 -C "killall java" &
+ssh irb170030@csa-dc28 -C "killall java" &
+ssh irb170030@csa-dc29 -C "killall java" &
+ssh irb170030@csa-dc30 -C "killall java" &
+ssh irb170030@csa-dc31 -C "killall java" &
+ssh irb170030@csa-dc32 -C "killall java" &
+ssh irb170030@csa-dc33 -C "killall java" &
+ssh irb170030@csa-dc34 -C "killall java" &
+ssh irb170030@csa-dc35 -C "killall java" &
+ssh irb170030@csa-dc36 -C "killall java" &
+ssh irb170030@csa-dc37 -C "killall java" &
+ssh irb170030@csa-dc38 -C "killall java" &
+ssh irb170030@csa-dc39 -C "killall java" &
+ssh irb170030@csa-dc40 -C "killall java" &
+ssh irb170030@csa-dc41 -C "killall java" &
+ssh irb170030@csa-dc42 -C "killall java" &
+ssh irb170030@csa-dc43 -C "killall java" &
+ssh irb170030@csa-dc44 -C "killall java" &
+ssh irb170030@csa-dc45 -C "killall java" &
+ssh irb170030@csa-dc46 -C "killall java" &
